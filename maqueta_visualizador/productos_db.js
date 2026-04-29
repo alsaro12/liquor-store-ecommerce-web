@@ -1,4 +1,4 @@
-const fs = require("fs/promises");
+﻿const fs = require("fs/promises");
 const path = require("path");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
@@ -6,25 +6,27 @@ const BASE_CSV_PATH = path.join(ROOT_DIR, "inventario_inicio_grecia.csv");
 const DEFAULT_PRODUCTS_CSV_PATH = path.join(ROOT_DIR, "productos.csv");
 const VENTAS_CSV_PATH = path.join(ROOT_DIR, "ventas_diarias.csv");
 const KARDEX_CSV_PATH = path.join(ROOT_DIR, "kardex.csv");
+const PURCHASE_PRICE_HISTORY_CSV_PATH = path.join(ROOT_DIR, "productos_precios_historial.csv");
 const SOURCE_CONFIG_PATH = path.join(ROOT_DIR, ".productos_source.json");
 const SOURCES_DIR = path.join(ROOT_DIR, "csv_sources");
 
-const PRODUCT_HEADERS = ["N°", "NOMBRE", "PRECIO", "PEDIDO", "STOCK_ACTUAL"];
+const PRODUCT_HEADERS = ["N°", "NOMBRE", "DESCRIPCION", "CATEGORIA", "PRECIO", "PRECIO_COMPRA", "IMAGENES", "STOCK_MAXIMO", "STOCK_MINIMO", "STOCK_ACTUAL"];
 const VENTAS_HEADERS = [
   "ID_VENTA",
   "FECHA",
-  "N°",
+  "NÂ°",
   "NOMBRE",
   "CANTIDAD",
   "PRECIO",
   "TOTAL",
   "TIPO_PAGO",
+  "TIPO_PAGO_DETALLE",
   "ORIGEN"
 ];
 const KARDEX_HEADERS = [
   "ID_MOV",
   "FECHA_HORA",
-  "N°",
+  "NÂ°",
   "NOMBRE",
   "TIPO",
   "CANTIDAD",
@@ -33,9 +35,18 @@ const KARDEX_HEADERS = [
   "REFERENCIA",
   "NOTA"
 ];
+const PURCHASE_PRICE_HISTORY_HEADERS = [
+  "ID_HISTORIAL",
+  "FECHA_HORA",
+  "NÂ°",
+  "NOMBRE",
+  "PRECIO_COMPRA",
+  "NOTA",
+  "ORIGEN"
+];
 
 const VALID_MONTHS = new Set(["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE"]);
-const PAYMENT_TYPES = ["A Ya Per", "Efectivo", "Pedido Ya", "Rappi", "EasyPay"];
+const PAYMENT_TYPES = ["Efectivo", "Yape", "Pedido Ya", "Rappi", "IZIPAY"];
 
 function buildError(status, message) {
   const error = new Error(message);
@@ -45,6 +56,69 @@ function buildError(status, message) {
 
 function trimValue(value) {
   return String(value ?? "").trim();
+}
+
+const PRODUCT_CATEGORY_ALIASES = new Map([
+  ["AGUAS", "AGUA"],
+  ["BEBIDA", "GASEOSA"],
+  ["BEBIDAS", "GASEOSA"],
+  ["CERVEZAS", "CERVEZA"],
+  ["CHAMPAGNE", "ESPUMANTE"],
+  ["CIGARROS", "CIGARRO"],
+  ["COCTELES", "COCTEL"],
+  ["ENERGIZANTES", "ENERGIZANTE"],
+  ["ESPUMANTES", "ESPUMANTE"],
+  ["GASEOSAS", "GASEOSA"],
+  ["GINS", "GIN"],
+  ["HIELOS", "HIELO"],
+  ["JUGOS", "JUGO"],
+  ["LICORES", "LICOR"],
+  ["PISCOS", "PISCO"],
+  ["REFRESCO", "GASEOSA"],
+  ["REFRESCOS", "GASEOSA"],
+  ["RONES", "RON"],
+  ["SNACKS", "SNACK"],
+  ["TEQUILAS", "TEQUILA"],
+  ["VINOS", "VINO"],
+  ["VODKAS", "VODKA"],
+  ["WHISKEY", "WHISKY"],
+  ["WHISKIES", "WHISKY"],
+  ["ACCESORIOS", "ACCESORIO"],
+  ["OTROS", "OTRO"]
+]);
+const PRODUCT_CATEGORIES = new Set([
+  "AGUA",
+  "CERVEZA",
+  "CIGARRO",
+  "COCTEL",
+  "ENERGIZANTE",
+  "ESPUMANTE",
+  "GASEOSA",
+  "GIN",
+  "HIELO",
+  "JUGO",
+  "LICOR",
+  "PISCO",
+  "RON",
+  "SNACK",
+  "TEQUILA",
+  "VINO",
+  "VODKA",
+  "WHISKY",
+  "ACCESORIO",
+  "OTRO"
+]);
+
+function normalizeProductCategoryValue(value) {
+  const clean = trimValue(value || "OTRO")
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const normalized = PRODUCT_CATEGORY_ALIASES.get(clean) || clean || "OTRO";
+  return PRODUCT_CATEGORIES.has(normalized) ? normalized : "OTRO";
 }
 
 function normalizeHeader(value) {
@@ -59,8 +133,20 @@ function normalizeHeaderKey(value) {
 }
 
 function isIdHeader(value) {
-  const normalized = normalizeHeader(value).replace(/\s+/g, "");
-  return normalized === "N°" || normalized === "Nº" || normalized === "N";
+  const compact = normalizeHeader(value).replace(/\s+/g, "");
+  const key = normalizeHeaderKey(value);
+  return (
+    compact === "Nï¿½" ||
+    compact === "NÂ°" ||
+    compact === "Nï¿½" ||
+    compact === "NÂº" ||
+    compact === "N" ||
+    key === "N" ||
+    key === "NA" ||
+    key === "NO" ||
+    key === "NRO" ||
+    key === "NUMERO"
+  );
 }
 
 function parseInteger(value) {
@@ -75,6 +161,31 @@ function parseId(value) {
   const number = parseInteger(value);
   if (!Number.isFinite(number) || number <= 0) return null;
   return number;
+}
+
+function resolveIncomingProductId(row) {
+  if (!row || typeof row !== "object") return null;
+  const directValue =
+    row.productId ??
+    row.productoId ??
+    row.producto_id ??
+    row["NÂ°"] ??
+    row["N"] ??
+    row.id ??
+    row.ID ??
+    row.n;
+  const directParsed = parseId(directValue);
+  if (directParsed) return directParsed;
+
+  for (const [key, value] of Object.entries(row)) {
+    const compactKey = normalizeHeaderKey(key);
+    if (["N", "NO", "NRO", "NUMERO", "PRODUCTOID", "PRODUCTO_ID"].includes(compactKey)) {
+      const parsed = parseId(value);
+      if (parsed) return parsed;
+    }
+  }
+
+  return null;
 }
 
 function parseDecimal(value) {
@@ -117,8 +228,25 @@ function normalizePaymentType(value, options = {}) {
   if (!raw) return fallback;
 
   const normalized = normalizeHeader(raw);
+  if (["AYAPER", "YAPE"].includes(normalized.replace(/\s+/g, ""))) {
+    return "Yape";
+  }
+  if (["EASY PAY", "EASYPAY", "IZIPAY", "IZI PAY", "IZI-PAY"].includes(normalized)) {
+    return "IZIPAY";
+  }
   const found = PAYMENT_TYPES.find((item) => normalizeHeader(item) === normalized);
   return found || fallback;
+}
+
+function normalizeSaleOrigin(value, options = {}) {
+  const fallback = options.defaultValue || "MANUAL";
+  const raw = trimValue(value);
+  if (!raw) return fallback;
+  const normalized = normalizeHeader(raw);
+  if (["MANUAL", "MOSTRADOR", "PRESENCIAL", "TIENDA"].includes(normalized)) return "MANUAL";
+  if (["DELIVERY", "REPARTO"].includes(normalized)) return "DELIVERY";
+  if (["APP", "APLICACION", "APLICACIï¿½N"].includes(normalized)) return "APP";
+  return raw.toUpperCase();
 }
 
 function todayIso() {
@@ -203,19 +331,26 @@ function stringifyCsv(rows) {
 }
 
 function normalizeProductRecord(raw) {
-  const id = parseId(raw["N°"] ?? raw.id ?? raw.n);
-  if (!id) throw buildError(400, "El campo N° es obligatorio y debe ser un numero entero positivo.");
+  const id = parseId(raw["NÂ°"] ?? raw.id ?? raw.n);
+  if (!id) throw buildError(400, "El campo NÂ° es obligatorio y debe ser un numero entero positivo.");
 
   const name = trimValue(raw.NOMBRE ?? raw.nombre);
   if (!name) throw buildError(400, "El campo NOMBRE es obligatorio.");
+  const description = trimValue(raw.DESCRIPCION ?? raw.descripcion ?? raw.descripción);
 
   const price = parseDecimal(raw.PRECIO ?? raw.precio);
   if (price === null) throw buildError(400, "El campo PRECIO es obligatorio y debe ser numerico.");
   if (price < 0) throw buildError(400, "El campo PRECIO no puede ser negativo.");
 
-  const pedido = parseInteger(raw.PEDIDO ?? raw.pedido ?? 0);
-  if (pedido !== null && pedido < 0) {
-    throw buildError(400, "El campo PEDIDO no puede ser negativo.");
+  const purchasePrice = parseDecimal(raw.PRECIO_COMPRA ?? raw.precio_compra ?? raw.precioCompra ?? 0);
+  if (purchasePrice === null) throw buildError(400, "El campo PRECIO_COMPRA debe ser numerico.");
+  if (purchasePrice < 0) throw buildError(400, "El campo PRECIO_COMPRA no puede ser negativo.");
+
+  const stockMaximo = parseInteger(
+    raw.STOCK_MAXIMO ?? raw.stock_maximo ?? raw.stockMaximo ?? raw.PEDIDO ?? raw.pedido ?? 0
+  );
+  if (stockMaximo !== null && stockMaximo < 0) {
+    throw buildError(400, "El campo STOCK_MAXIMO no puede ser negativo.");
   }
 
   const stockActual = parseDecimal(
@@ -230,29 +365,81 @@ function normalizeProductRecord(raw) {
     throw buildError(400, "El campo STOCK_ACTUAL no puede ser negativo.");
   }
 
+  const stockMinimo = parseDecimal(
+    raw.STOCK_MINIMO ?? raw.stockMinimo ?? raw.stock_minimo ?? raw.stockMin ?? 0
+  );
+  if (stockMinimo === null) {
+    throw buildError(400, "El campo STOCK_MINIMO debe ser numerico.");
+  }
+  if (stockMinimo < 0) {
+    throw buildError(400, "El campo STOCK_MINIMO no puede ser negativo.");
+  }
+
+  const imagesRaw = raw.IMAGENES ?? raw.imagenes ?? raw.imagenes_json ?? [];
+  const images = (Array.isArray(imagesRaw) ? imagesRaw : String(imagesRaw || "").split("|"))
+    .map((item) => {
+      if (item && typeof item === "object") {
+        const original = trimValue(item.original_image_url ?? item.originalImageUrl ?? item.original ?? item.url ?? item.src ?? "");
+        const filtered = trimValue(item.filtered_image_url ?? item.filteredImageUrl ?? item.filtered ?? item.url ?? item.src ?? original);
+        if (!original && !filtered) return null;
+        return {
+          original_image_url: original || filtered,
+          filtered_image_url: filtered || original,
+          status: trimValue(item.status || (filtered ? "completed" : "pending")) || "pending"
+        };
+      }
+      const src = trimValue(item);
+      if (!src) return null;
+      return {
+        original_image_url: src,
+        filtered_image_url: src,
+        status: "completed"
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 4);
+
   return {
-    "N°": id,
+    "NÂ°": id,
     NOMBRE: name,
+    DESCRIPCION: description,
+    CATEGORIA: normalizeProductCategoryValue(raw.CATEGORIA ?? raw.categoria ?? "OTRO"),
     PRECIO: round2(price),
-    PEDIDO: pedido ?? 0,
+    PRECIO_COMPRA: round2(purchasePrice),
+    IMAGENES: images,
+    PEDIDO: stockMaximo ?? 0,
+    STOCK_MINIMO: round2(stockMinimo),
     STOCK_ACTUAL: round2(stockActual)
   };
 }
 
 function productToRow(product) {
-  return [product["N°"], product.NOMBRE, product.PRECIO, product.PEDIDO, product.STOCK_ACTUAL];
+  return [
+    product["NÂ°"],
+    product.NOMBRE,
+    product.DESCRIPCION ?? "",
+    product.CATEGORIA ?? "OTRO",
+    product.PRECIO,
+    product.PRECIO_COMPRA ?? 0,
+    JSON.stringify(Array.isArray(product.IMAGENES) ? product.IMAGENES.slice(0, 4) : []),
+    product.PEDIDO,
+    product.STOCK_MINIMO ?? 0,
+    product.STOCK_ACTUAL
+  ];
 }
 
 function saleToRow(sale) {
+  const paymentDisplay = trimValue(sale.TIPO_PAGO_DETALLE || sale.TIPO_PAGO || "Efectivo") || "Efectivo";
   return [
     sale.ID_VENTA,
     sale.FECHA,
-    sale["N°"],
+    sale["NÂ°"],
     sale.NOMBRE,
     sale.CANTIDAD,
     sale.PRECIO,
     sale.TOTAL,
-    normalizePaymentType(sale.TIPO_PAGO, { defaultValue: "Efectivo" }),
+    paymentDisplay,
+    paymentDisplay,
     sale.ORIGEN || "MANUAL"
   ];
 }
@@ -261,7 +448,7 @@ function movementToRow(move) {
   return [
     move.ID_MOV,
     move.FECHA_HORA,
-    move["N°"],
+    move["NÂ°"],
     move.NOMBRE,
     move.TIPO,
     move.CANTIDAD,
@@ -269,6 +456,18 @@ function movementToRow(move) {
     move.STOCK_DESPUES,
     move.REFERENCIA || "",
     move.NOTA || ""
+  ];
+}
+
+function purchasePriceHistoryToRow(item) {
+  return [
+    item.ID_HISTORIAL,
+    item.FECHA_HORA,
+    item["NÂ°"],
+    item.NOMBRE,
+    item.PRECIO_COMPRA,
+    item.NOTA || "",
+    item.ORIGEN || ""
   ];
 }
 
@@ -378,7 +577,10 @@ function extractProductsFromBaseRows(rows) {
     if (!VALID_MONTHS.has(month)) continue;
 
     if (isIdHeader(row[1])) {
-      pedidoColumnIndex = row.findIndex((cell) => normalizeHeader(cell) === "PEDIDO");
+      pedidoColumnIndex = row.findIndex((cell) => {
+        const key = normalizeHeaderKey(cell);
+        return key === "PEDIDO" || key === "STOCKMAXIMO";
+      });
       cierreColumns = row
         .map((cell, index) => ({ key: normalizeHeaderKey(cell), index }))
         .filter((item) => item.key === "CIERRE")
@@ -413,15 +615,19 @@ function extractProductsFromBaseRows(rows) {
 
     const previous = productsById.get(id);
     productsById.set(id, {
-      "N°": id,
+      "NÂ°": id,
       NOMBRE: name || previous?.NOMBRE || "",
+      DESCRIPCION: previous?.DESCRIPCION || "",
       PRECIO: round2(price ?? previous?.PRECIO ?? 0),
+      PRECIO_COMPRA: round2(previous?.PRECIO_COMPRA ?? 0),
+      IMAGENES: Array.isArray(previous?.IMAGENES) ? previous.IMAGENES.slice(0, 4) : [],
       PEDIDO: pedido ?? previous?.PEDIDO ?? 0,
+      STOCK_MINIMO: round2(previous?.STOCK_MINIMO ?? 0),
       STOCK_ACTUAL: round2(Math.max(0, stockCandidate ?? previous?.STOCK_ACTUAL ?? 0))
     });
   }
 
-  return [...productsById.values()].sort((a, b) => a["N°"] - b["N°"]);
+  return [...productsById.values()].sort((a, b) => a["NÂ°"] - b["NÂ°"]);
 }
 
 function extractSalesFromBaseRows(rows) {
@@ -467,7 +673,7 @@ function extractSalesFromBaseRows(rows) {
 
       salesByKey.set(key, {
         FECHA: saleCol.date,
-        "N°": id,
+        "NÂ°": id,
         NOMBRE: name,
         CANTIDAD: nextQty,
         PRECIO: price,
@@ -481,7 +687,7 @@ function extractSalesFromBaseRows(rows) {
   const sales = [...salesByKey.values()];
 
   sales.sort((a, b) => {
-    if (a.FECHA === b.FECHA) return a["N°"] - b["N°"];
+    if (a.FECHA === b.FECHA) return a["NÂ°"] - b["NÂ°"];
     return a.FECHA.localeCompare(b.FECHA);
   });
 
@@ -509,18 +715,32 @@ async function writeKardexToPath(movements, targetPath) {
   await fs.writeFile(targetPath, stringifyCsv(rows), "utf8");
 }
 
+async function writePurchasePriceHistoryToPath(items, targetPath) {
+  const rows = [PURCHASE_PRICE_HISTORY_HEADERS, ...items.map(purchasePriceHistoryToRow)];
+  await fs.mkdir(path.dirname(targetPath), { recursive: true });
+  await fs.writeFile(targetPath, stringifyCsv(rows), "utf8");
+}
+
 function parseProductsCsvRows(rows) {
   if (!rows.length) return [];
 
   const header = rows[0];
   const idIndex = header.findIndex((cell) => isIdHeader(cell));
   const nameIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "NOMBRE");
+  const descriptionIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "DESCRIPCION");
+  const categoryIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "CATEGORIA");
   const priceIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "PRECIO");
-  const pedidoIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "PEDIDO");
+  const purchasePriceIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "PRECIOCOMPRA");
+  const imagesIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "IMAGENES");
+  const pedidoIndex = header.findIndex((cell) => {
+    const key = normalizeHeaderKey(cell);
+    return key === "PEDIDO" || key === "STOCKMAXIMO";
+  });
+  const stockMinIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "STOCKMINIMO");
   const stockIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "STOCKACTUAL");
 
   if (idIndex < 0 || nameIndex < 0 || priceIndex < 0) {
-    throw buildError(400, "CSV invalido. Debe incluir columnas N°, NOMBRE y PRECIO.");
+    throw buildError(400, "CSV invalido. Debe incluir columnas NÂ°, NOMBRE y PRECIO.");
   }
 
   const productsById = new Map();
@@ -534,19 +754,39 @@ function parseProductsCsvRows(rows) {
     if (!name) continue;
 
     const price = round2(parseDecimal(row[priceIndex]) ?? 0);
+    const purchasePrice =
+      purchasePriceIndex >= 0 ? round2(parseDecimal(row[purchasePriceIndex]) ?? 0) : 0;
+    let images = [];
+    if (imagesIndex >= 0) {
+      const rawImages = trimValue(row[imagesIndex]);
+      if (rawImages) {
+        try {
+          const parsed = JSON.parse(rawImages);
+          if (Array.isArray(parsed)) images = normalizeProductRecord({ "NÂ°": id, NOMBRE: name, PRECIO: price, IMAGENES: parsed }).IMAGENES;
+        } catch {
+          images = normalizeProductRecord({ "NÂ°": id, NOMBRE: name, PRECIO: price, IMAGENES: rawImages.split("|") }).IMAGENES;
+        }
+      }
+    }
     const pedido = pedidoIndex >= 0 ? parseInteger(row[pedidoIndex]) ?? 0 : 0;
+    const stockMinimo = stockMinIndex >= 0 ? parseDecimal(row[stockMinIndex]) ?? 0 : 0;
     const stock = stockIndex >= 0 ? parseDecimal(row[stockIndex]) ?? 0 : 0;
 
     productsById.set(id, {
-      "N°": id,
+      "NÂ°": id,
       NOMBRE: name,
+      DESCRIPCION: trimValue(descriptionIndex >= 0 ? row[descriptionIndex] : ""),
+      CATEGORIA: normalizeProductCategoryValue(categoryIndex >= 0 ? row[categoryIndex] : "OTRO"),
       PRECIO: price,
+      PRECIO_COMPRA: purchasePrice,
+      IMAGENES: images,
       PEDIDO: pedido,
+      STOCK_MINIMO: round2(Math.max(0, stockMinimo)),
       STOCK_ACTUAL: round2(Math.max(0, stock))
     });
   }
 
-  return [...productsById.values()].sort((a, b) => a["N°"] - b["N°"]);
+  return [...productsById.values()].sort((a, b) => a["NÂ°"] - b["NÂ°"]);
 }
 
 function parseSalesCsvRows(rows) {
@@ -561,6 +801,7 @@ function parseSalesCsvRows(rows) {
   const priceIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "PRECIO");
   const totalIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "TOTAL");
   const paymentTypeIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "TIPOPAGO");
+  const paymentDetailIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "TIPOPAGODETALLE");
   const sourceIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "ORIGEN");
 
   if (dateIndex < 0 || productIdIndex < 0 || nameIndex < 0 || qtyIndex < 0) {
@@ -587,12 +828,16 @@ function parseSalesCsvRows(rows) {
     sales.push({
       ID_VENTA: idVenta,
       FECHA: date,
-      "N°": productId,
+      "NÂ°": productId,
       NOMBRE: trimValue(row[nameIndex]),
       CANTIDAD: round2(qty),
       PRECIO: price,
       TOTAL: total,
-      TIPO_PAGO: normalizePaymentType(row[paymentTypeIndex], { defaultValue: "Efectivo" }),
+      TIPO_PAGO: trimValue(row[paymentTypeIndex]) || "Efectivo",
+      TIPO_PAGO_DETALLE:
+        trimValue(paymentDetailIndex >= 0 ? row[paymentDetailIndex] : "") ||
+        trimValue(row[paymentTypeIndex]) ||
+        "Efectivo",
       ORIGEN: trimValue(row[sourceIndex]) || "MANUAL"
     });
   }
@@ -642,7 +887,7 @@ function parseKardexCsvRows(rows) {
     items.push({
       ID_MOV: id,
       FECHA_HORA: dtRaw,
-      "N°": productId,
+      "NÂ°": productId,
       NOMBRE: trimValue(row[nameIndex]),
       TIPO: normalizeHeader(row[typeIndex]) === "INGRESO" ? "INGRESO" : "SALIDA",
       CANTIDAD: round2(qty),
@@ -655,6 +900,49 @@ function parseKardexCsvRows(rows) {
 
   items.sort((a, b) => {
     if (a.FECHA_HORA === b.FECHA_HORA) return b.ID_MOV - a.ID_MOV;
+    return b.FECHA_HORA.localeCompare(a.FECHA_HORA);
+  });
+
+  return items;
+}
+
+function parsePurchasePriceHistoryCsvRows(rows) {
+  if (!rows.length) return [];
+
+  const header = rows[0];
+  const idIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "IDHISTORIAL");
+  const dtIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "FECHAHORA");
+  const productIdIndex = header.findIndex((cell) => isIdHeader(cell));
+  const nameIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "NOMBRE");
+  const purchasePriceIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "PRECIOCOMPRA");
+  const noteIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "NOTA");
+  const sourceIndex = header.findIndex((cell) => normalizeHeaderKey(cell) === "ORIGEN");
+
+  if (dtIndex < 0 || productIdIndex < 0 || purchasePriceIndex < 0) return [];
+
+  const items = [];
+  for (let i = 1; i < rows.length; i += 1) {
+    const row = rows[i];
+    const productId = parseId(row[productIdIndex]);
+    if (!productId) continue;
+    const dtRaw = trimValue(row[dtIndex]);
+    if (!dtRaw) continue;
+    const purchasePrice = parseDecimal(row[purchasePriceIndex]);
+    if (purchasePrice === null || purchasePrice < 0) continue;
+    const id = idIndex >= 0 ? parseId(row[idIndex]) ?? i : i;
+    items.push({
+      ID_HISTORIAL: id,
+      FECHA_HORA: dtRaw,
+      "NÂ°": productId,
+      NOMBRE: trimValue(row[nameIndex]),
+      PRECIO_COMPRA: round2(purchasePrice),
+      NOTA: trimValue(row[noteIndex]),
+      ORIGEN: trimValue(row[sourceIndex])
+    });
+  }
+
+  items.sort((a, b) => {
+    if (a.FECHA_HORA === b.FECHA_HORA) return b.ID_HISTORIAL - a.ID_HISTORIAL;
     return b.FECHA_HORA.localeCompare(a.FECHA_HORA);
   });
 
@@ -731,7 +1019,10 @@ async function ensureProductsSchema() {
   }
 
   const hasStockColumn = rows[0].some((cell) => normalizeHeaderKey(cell) === "STOCKACTUAL");
-  if (hasStockColumn) return { migrated: false };
+  const hasPurchasePriceColumn = rows[0].some((cell) => normalizeHeaderKey(cell) === "PRECIOCOMPRA");
+  const hasImagesColumn = rows[0].some((cell) => normalizeHeaderKey(cell) === "IMAGENES");
+  const hasCategoryColumn = rows[0].some((cell) => normalizeHeaderKey(cell) === "CATEGORIA");
+  if (hasStockColumn && hasPurchasePriceColumn && hasImagesColumn && hasCategoryColumn) return { migrated: false };
 
   const currentProducts = parseProductsCsvRows(rows);
   let stockById = new Map();
@@ -740,7 +1031,7 @@ async function ensureProductsSchema() {
     try {
       const baseRows = await loadBaseRows();
       const baseProducts = extractProductsFromBaseRows(baseRows);
-      stockById = new Map(baseProducts.map((item) => [item["N°"], item.STOCK_ACTUAL]));
+      stockById = new Map(baseProducts.map((item) => [item["NÂ°"], item.STOCK_ACTUAL]));
     } catch {
       stockById = new Map();
     }
@@ -748,7 +1039,10 @@ async function ensureProductsSchema() {
 
   const migrated = currentProducts.map((item) => ({
     ...item,
-    STOCK_ACTUAL: round2(Math.max(0, stockById.get(item["N°"]) ?? 0))
+    CATEGORIA: normalizeProductCategoryValue(item.CATEGORIA || "OTRO"),
+    PRECIO_COMPRA: round2(Math.max(0, item.PRECIO_COMPRA ?? 0)),
+    IMAGENES: Array.isArray(item.IMAGENES) ? item.IMAGENES.slice(0, 4) : [],
+    STOCK_ACTUAL: round2(Math.max(0, stockById.get(item["NÂ°"]) ?? 0))
   }));
 
   await writeProductsToPath(migrated, source.activeCsvPath);
@@ -798,6 +1092,20 @@ async function ensureKardexCsv() {
   return { created: true };
 }
 
+async function ensurePurchasePriceHistoryCsv() {
+  const exists = await existsFile(PURCHASE_PRICE_HISTORY_CSV_PATH);
+  if (!exists) {
+    await writePurchasePriceHistoryToPath([], PURCHASE_PRICE_HISTORY_CSV_PATH);
+    return { created: true };
+  }
+
+  const raw = await fs.readFile(PURCHASE_PRICE_HISTORY_CSV_PATH, "utf8");
+  if (trimValue(raw)) return { created: false };
+
+  await writePurchasePriceHistoryToPath([], PURCHASE_PRICE_HISTORY_CSV_PATH);
+  return { created: true };
+}
+
 async function ensureInventoryData(options = {}) {
   await ensureProductsCsv({
     forceRebuild: Boolean(options.forceRebuildProducts),
@@ -809,10 +1117,12 @@ async function ensureInventoryData(options = {}) {
     forceRebuild: Boolean(options.forceRebuildSales)
   });
   const kardexStatus = await ensureKardexCsv();
+  const purchasePriceHistoryStatus = await ensurePurchasePriceHistoryCsv();
 
   return {
     ventasStatus,
-    kardexStatus
+    kardexStatus,
+    purchasePriceHistoryStatus
   };
 }
 
@@ -848,6 +1158,16 @@ async function readKardex() {
 
 async function writeKardex(movements) {
   await writeKardexToPath(movements, KARDEX_CSV_PATH);
+}
+
+async function readPurchasePriceHistory() {
+  await ensurePurchasePriceHistoryCsv();
+  const raw = await fs.readFile(PURCHASE_PRICE_HISTORY_CSV_PATH, "utf8");
+  return parsePurchasePriceHistoryCsvRows(parseCsv(raw));
+}
+
+async function writePurchasePriceHistory(items) {
+  await writePurchasePriceHistoryToPath(items, PURCHASE_PRICE_HISTORY_CSV_PATH);
 }
 
 async function readRawActiveCsv() {
@@ -896,14 +1216,15 @@ function filterProducts(products, options = {}) {
   return products.filter((item) => {
     const matchesQuery =
       !query ||
-      String(item["N°"]).includes(query) ||
+      String(item["NÂ°"]).includes(query) ||
       String(item.NOMBRE ?? "")
         .toLowerCase()
         .includes(query) ||
       String(item.PRECIO ?? "").includes(query) ||
+      String(item.PRECIO_COMPRA ?? "").includes(query) ||
       String(item.STOCK_ACTUAL ?? "").includes(query);
 
-    const pedido = Number(item.PEDIDO) || 0;
+    const pedido = Number(item.STOCK_MAXIMO ?? item.PEDIDO) || 0;
     const matchesPedido =
       pedidoFilter === "todos" ||
       (pedidoFilter === "con-pedido" && pedido > 0) ||
@@ -919,7 +1240,7 @@ function filterSales(sales, options = {}) {
 
   return sales.filter((item) => {
     return (
-      String(item["N°"]).includes(query) ||
+      String(item["NÂ°"]).includes(query) ||
       String(item.NOMBRE ?? "")
         .toLowerCase()
         .includes(query) ||
@@ -940,7 +1261,7 @@ function filterKardex(movements, options = {}) {
 
     const matchesQuery =
       !query ||
-      String(item["N°"]).includes(query) ||
+      String(item["NÂ°"]).includes(query) ||
       String(item.NOMBRE ?? "")
         .toLowerCase()
         .includes(query) ||
@@ -978,7 +1299,7 @@ async function getProductStats() {
   const products = await readProducts();
   return {
     total: products.length,
-    conPedido: products.filter((item) => Number(item.PEDIDO) > 0).length,
+    conPedido: products.filter((item) => Number(item.STOCK_MAXIMO ?? item.PEDIDO) > 0).length,
     stockTotal: round2(products.reduce((acc, item) => acc + (Number(item.STOCK_ACTUAL) || 0), 0))
   };
 }
@@ -990,7 +1311,7 @@ async function appendKardexMovement(payload) {
   const movement = {
     ID_MOV: nextId,
     FECHA_HORA: payload.FECHA_HORA || nowIsoDateTime(),
-    "N°": payload["N°"],
+    "NÂ°": payload["NÂ°"],
     NOMBRE: payload.NOMBRE,
     TIPO: payload.TIPO,
     CANTIDAD: round2(payload.CANTIDAD),
@@ -1005,28 +1326,70 @@ async function appendKardexMovement(payload) {
   return movement;
 }
 
+async function appendPurchasePriceHistory(payload) {
+  const history = await readPurchasePriceHistory();
+  const nextId = history.reduce((max, item) => Math.max(max, item.ID_HISTORIAL || 0), 0) + 1;
+  const item = {
+    ID_HISTORIAL: nextId,
+    FECHA_HORA: payload.FECHA_HORA || nowIsoDateTime(),
+    "NÂ°": payload["NÂ°"],
+    NOMBRE: payload.NOMBRE,
+    PRECIO_COMPRA: round2(payload.PRECIO_COMPRA),
+    NOTA: trimValue(payload.NOTA),
+    ORIGEN: trimValue(payload.ORIGEN || "PRODUCTO_EDICION")
+  };
+  history.push(item);
+  history.sort((a, b) => {
+    if (a.FECHA_HORA === b.FECHA_HORA) return b.ID_HISTORIAL - a.ID_HISTORIAL;
+    return b.FECHA_HORA.localeCompare(a.FECHA_HORA);
+  });
+  await writePurchasePriceHistory(history);
+  return item;
+}
+
+async function readProductPurchasePriceHistory(productIdInput) {
+  const productId = parseId(productIdInput);
+  if (!productId) throw buildError(400, "El id del producto es invalido.");
+  const history = await readPurchasePriceHistory();
+  return history.filter((item) => item["NÂ°"] === productId);
+}
+
 async function createProduct(payload) {
   const products = await readProducts();
-  const hasCustomId = payload["N°"] !== undefined || payload.id !== undefined || payload.n !== undefined;
-  const nextId = products.reduce((max, item) => Math.max(max, item["N°"]), 0) + 1;
-  const withId = { ...payload, "N°": hasCustomId ? payload["N°"] ?? payload.id ?? payload.n : nextId };
+  const hasCustomId =
+    payload["Nï¿½"] !== undefined || payload["NÂ°"] !== undefined || payload.id !== undefined || payload.n !== undefined;
+  const nextId = products.reduce((max, item) => Math.max(max, item["NÂ°"]), 0) + 1;
+  const withId = {
+    ...payload,
+    "NÂ°": hasCustomId ? payload["Nï¿½"] ?? payload["NÂ°"] ?? payload.id ?? payload.n : nextId
+  };
 
   const stockInitial =
     payload.STOCK_ACTUAL ?? payload.stockActual ?? payload.stock_actual ?? payload.stockInicial ?? 0;
 
   const product = normalizeProductRecord({ ...withId, STOCK_ACTUAL: stockInitial });
 
-  if (products.some((item) => item["N°"] === product["N°"])) {
-    throw buildError(409, `Ya existe un producto con N° ${product["N°"]}.`);
+  if (products.some((item) => item["NÂ°"] === product["NÂ°"])) {
+    throw buildError(409, `Ya existe un producto con NÂ° ${product["NÂ°"]}.`);
   }
 
   products.push(product);
-  products.sort((a, b) => a["N°"] - b["N°"]);
+  products.sort((a, b) => a["NÂ°"] - b["NÂ°"]);
   await writeProducts(products);
+
+  if (Number(product.PRECIO_COMPRA || 0) > 0) {
+    await appendPurchasePriceHistory({
+      "NÂ°": product["NÂ°"],
+      NOMBRE: product.NOMBRE,
+      PRECIO_COMPRA: Number(product.PRECIO_COMPRA || 0),
+      NOTA: "Precio de compra inicial",
+      ORIGEN: "CREACION_PRODUCTO"
+    });
+  }
 
   if (Number(product.STOCK_ACTUAL) > 0) {
     await appendKardexMovement({
-      "N°": product["N°"],
+      "NÂ°": product["NÂ°"],
       NOMBRE: product.NOMBRE,
       TIPO: "INGRESO",
       CANTIDAD: Number(product.STOCK_ACTUAL),
@@ -1061,38 +1424,101 @@ async function updateProduct(idInput, payload) {
   const id = parseId(idInput);
   if (!id) throw buildError(400, "El id del producto es invalido.");
 
-  if (payload["N°"] !== undefined && parseId(payload["N°"]) !== id) {
-    throw buildError(400, "El campo N° no se puede editar.");
-  }
-
   const products = await readProducts();
-  const index = products.findIndex((item) => item["N°"] === id);
-  if (index < 0) throw buildError(404, `No existe producto con N° ${id}.`);
+  const index = products.findIndex((item) => item["NÂ°"] === id);
+  if (index < 0) throw buildError(404, `No existe producto con NÂ° ${id}.`);
 
   const current = products[index];
+  const hasNextId =
+    payload["Nï¿½"] !== undefined ||
+    payload["NÂ°"] !== undefined ||
+    payload["N°"] !== undefined ||
+    payload.id !== undefined ||
+    payload.n !== undefined;
+  const nextId = hasNextId ? parseId(payload["Nï¿½"] ?? payload["NÂ°"] ?? payload["N°"] ?? payload.id ?? payload.n) : id;
+  if (!nextId) throw buildError(400, "El campo NÂ° debe ser un numero entero positivo.");
+  const shouldSwapProductCode =
+    payload.swapProductCode === true ||
+    payload.intercambiarCodigo === true ||
+    payload.intercambiar_orden === true;
+  const targetIndex = products.findIndex((item) => item["NÂ°"] === nextId);
+  if (nextId !== id && targetIndex >= 0 && !shouldSwapProductCode) {
+    throw buildError(409, `Ya existe un producto con NÂ° ${nextId}.`);
+  }
+
   const stockDelta = parseStockDelta(payload);
   const nextStock = round2(Number(current.STOCK_ACTUAL || 0) + stockDelta);
 
   if (nextStock < 0) {
-    throw buildError(400, `Stock insuficiente para N° ${id}. Stock actual: ${current.STOCK_ACTUAL}.`);
+    throw buildError(400, `Stock insuficiente para NÂ° ${id}. Stock actual: ${current.STOCK_ACTUAL}.`);
   }
 
   const merged = {
-    "N°": current["N°"],
+    "NÂ°": nextId,
     NOMBRE: payload.NOMBRE ?? current.NOMBRE,
+    DESCRIPCION: payload.DESCRIPCION ?? payload.descripcion ?? current.DESCRIPCION ?? "",
+    CATEGORIA: normalizeProductCategoryValue(payload.CATEGORIA ?? payload.categoria ?? current.CATEGORIA ?? "OTRO"),
     PRECIO: payload.PRECIO ?? current.PRECIO,
-    PEDIDO: payload.PEDIDO ?? current.PEDIDO,
+    PRECIO_COMPRA:
+      payload.PRECIO_COMPRA ?? payload.precio_compra ?? payload.precioCompra ?? current.PRECIO_COMPRA ?? 0,
+    IMAGENES: payload.IMAGENES ?? payload.imagenes ?? payload.imagenes_json ?? current.IMAGENES ?? [],
+    PEDIDO:
+      payload.STOCK_MAXIMO ??
+      payload.stock_maximo ??
+      payload.stockMaximo ??
+      payload.PEDIDO ??
+      current.PEDIDO,
+    STOCK_MINIMO: payload.STOCK_MINIMO ?? payload.stock_minimo ?? payload.stockMinimo ?? current.STOCK_MINIMO ?? 0,
     STOCK_ACTUAL: nextStock
   };
 
   const updated = normalizeProductRecord(merged);
   products[index] = updated;
-  products.sort((a, b) => a["N°"] - b["N°"]);
+  if (nextId !== id && targetIndex >= 0) {
+    products[targetIndex] = normalizeProductRecord({ ...products[targetIndex], "NÂ°": id });
+  }
+  products.sort((a, b) => a["NÂ°"] - b["NÂ°"]);
   await writeProducts(products);
+
+  if (nextId !== id) {
+    const sales = await readSales();
+    const updatedSales = sales.map((sale) => {
+      if (sale["NÂ°"] === id) return { ...sale, "NÂ°": nextId };
+      if (targetIndex >= 0 && sale["NÂ°"] === nextId) return { ...sale, "NÂ°": id };
+      return sale;
+    });
+    await writeSales(updatedSales);
+
+    const movements = await readKardex();
+    const updatedMovements = movements.map((movement) => {
+      if (movement["NÂ°"] === id) return { ...movement, "NÂ°": nextId };
+      if (targetIndex >= 0 && movement["NÂ°"] === nextId) return { ...movement, "NÂ°": id };
+      return movement;
+    });
+    await writeKardex(updatedMovements);
+
+    const history = await readPurchasePriceHistory();
+    const updatedHistory = history.map((item) => {
+      if (item["NÂ°"] === id) return { ...item, "NÂ°": nextId };
+      if (targetIndex >= 0 && item["NÂ°"] === nextId) return { ...item, "NÂ°": id };
+      return item;
+    });
+    await writePurchasePriceHistory(updatedHistory);
+  }
+
+  if (round2(updated.PRECIO_COMPRA || 0) !== round2(current.PRECIO_COMPRA || 0)) {
+    await appendPurchasePriceHistory({
+      "NÂ°": updated["NÂ°"],
+      NOMBRE: updated.NOMBRE,
+      PRECIO_COMPRA: Number(updated.PRECIO_COMPRA || 0),
+      NOTA: trimValue(payload.nota) || "Cambio de precio de compra",
+      ORIGEN: "EDICION_PRODUCTO"
+    });
+  }
 
   if (stockDelta !== 0) {
     await appendKardexMovement({
-      "N°": updated["N°"],
+      "NÂ°": updated["NÂ°"],
       NOMBRE: updated.NOMBRE,
       TIPO: stockDelta > 0 ? "INGRESO" : "SALIDA",
       CANTIDAD: Math.abs(stockDelta),
@@ -1111,8 +1537,8 @@ async function deleteProduct(idInput) {
   if (!id) throw buildError(400, "El id del producto es invalido.");
 
   const products = await readProducts();
-  const index = products.findIndex((item) => item["N°"] === id);
-  if (index < 0) throw buildError(404, `No existe producto con N° ${id}.`);
+  const index = products.findIndex((item) => item["NÂ°"] === id);
+  if (index < 0) throw buildError(404, `No existe producto con NÂ° ${id}.`);
 
   const [removed] = products.splice(index, 1);
   await writeProducts(products);
@@ -1120,7 +1546,7 @@ async function deleteProduct(idInput) {
 }
 
 async function registerSale(payload) {
-  const productId = parseId(payload["N°"] ?? payload.id ?? payload.productId ?? payload.productoId);
+  const productId = parseId(payload["NÂ°"] ?? payload.id ?? payload.productId);
   if (!productId) throw buildError(400, "Debes indicar un producto valido.");
 
   const quantity = parseDecimal(payload.cantidad ?? payload.qty ?? payload.CANTIDAD);
@@ -1128,22 +1554,27 @@ async function registerSale(payload) {
     throw buildError(400, "La cantidad de venta debe ser mayor a 0.");
   }
 
-  const fecha = parseIsoDate(payload.fecha) || todayIso();
+  const fecha =
+    parseIsoDate(payload.fecha_venta ?? payload.fechaVenta ?? payload.FECHA_VENTA ?? payload.fecha ?? payload.FECHA) ||
+    todayIso();
   const tipoPago = normalizePaymentType(payload.tipoPago ?? payload.tipo_pago ?? payload.TIPO_PAGO, {
     defaultValue: "Efectivo"
+  });
+  const origin = normalizeSaleOrigin(payload.tipoVenta ?? payload.origen ?? payload.ORIGEN, {
+    defaultValue: "MANUAL"
   });
   const nota = trimValue(payload.nota);
 
   const products = await readProducts();
-  const index = products.findIndex((item) => item["N°"] === productId);
-  if (index < 0) throw buildError(404, `No existe producto con N° ${productId}.`);
+  const index = products.findIndex((item) => item["NÂ°"] === productId);
+  if (index < 0) throw buildError(404, `No existe producto con NÂ° ${productId}.`);
 
   const product = products[index];
   const stockBefore = Number(product.STOCK_ACTUAL || 0);
   const stockAfter = round2(stockBefore - quantity);
 
   if (stockAfter < 0) {
-    throw buildError(400, `Stock insuficiente para N° ${productId}. Stock actual: ${stockBefore}.`);
+    throw buildError(400, `Stock insuficiente para NÂ° ${productId}. Stock actual: ${stockBefore}.`);
   }
 
   product.STOCK_ACTUAL = stockAfter;
@@ -1157,20 +1588,21 @@ async function registerSale(payload) {
   const sale = {
     ID_VENTA: nextSaleId,
     FECHA: fecha,
-    "N°": product["N°"],
+    "NÂ°": product["NÂ°"],
     NOMBRE: product.NOMBRE,
     CANTIDAD: round2(quantity),
     PRECIO: round2(price),
     TOTAL: round2(price * quantity),
     TIPO_PAGO: tipoPago,
-    ORIGEN: "MANUAL"
+    TIPO_PAGO_DETALLE: tipoPago,
+    ORIGEN: origin
   };
 
   sales.push(sale);
   await writeSales(sales);
 
   const movement = await appendKardexMovement({
-    "N°": product["N°"],
+    "NÂ°": product["NÂ°"],
     NOMBRE: product.NOMBRE,
     TIPO: "SALIDA",
     CANTIDAD: round2(quantity),
@@ -1187,6 +1619,137 @@ async function registerSale(payload) {
   };
 }
 
+async function registerSaleBatch(payload) {
+  const rawItems = Array.isArray(payload?.items) ? payload.items : [];
+  if (!rawItems.length) {
+    throw buildError(400, "Debes enviar al menos un producto en items.");
+  }
+
+  const aggregated = new Map();
+  for (const row of rawItems) {
+    const productId = resolveIncomingProductId(row);
+    if (!productId) throw buildError(400, "Producto invalido en items.");
+    const quantity = parseDecimal(row?.cantidad ?? row?.CANTIDAD);
+    if (quantity === null || quantity <= 0) {
+      throw buildError(400, "La cantidad de venta debe ser mayor a 0.");
+    }
+    const prev = aggregated.get(productId) || 0;
+    aggregated.set(productId, round2(prev + quantity));
+  }
+
+  const fecha =
+    parseIsoDate(payload.fecha_venta ?? payload.fechaVenta ?? payload.FECHA_VENTA ?? payload.fecha ?? payload.FECHA) ||
+    todayIso();
+  const origin = normalizeSaleOrigin(payload.tipoVenta ?? payload.origen ?? payload.ORIGEN, {
+    defaultValue: "MANUAL"
+  });
+  const nota = trimValue(payload.nota);
+
+  const products = await readProducts();
+  const items = [];
+  for (const [productId, cantidad] of aggregated.entries()) {
+    const index = products.findIndex((item) => Number(item["NÂ°"]) === Number(productId));
+    if (index < 0) throw buildError(404, `No existe producto con NÂ° ${productId}.`);
+    const product = products[index];
+    const stockBefore = round2(Number(product.STOCK_ACTUAL || 0));
+    const stockAfter = round2(stockBefore - cantidad);
+    if (stockAfter < 0) {
+      throw buildError(400, `Stock insuficiente para NÂ° ${productId}. Stock actual: ${stockBefore}.`);
+    }
+    const price = round2(Number(product.PRECIO || 0));
+    items.push({
+      index,
+      productId,
+      cantidad: round2(cantidad),
+      product,
+      stockBefore,
+      stockAfter,
+      price,
+      total: round2(price * cantidad)
+    });
+  }
+
+  const total = round2(items.reduce((acc, item) => acc + item.total, 0));
+  let paymentSplit = Array.isArray(payload?.paymentSplit)
+    ? payload.paymentSplit
+        .map((row) => ({
+          tipoPago: normalizePaymentType(row?.tipoPago ?? row?.tipo, { defaultValue: "Efectivo" }),
+          monto: round2(Number(row?.monto || 0))
+        }))
+        .filter((row) => row.monto > 0)
+    : [];
+  if (!paymentSplit.length) {
+    paymentSplit = [
+      {
+        tipoPago: normalizePaymentType(payload.tipoPago ?? payload.tipo_pago ?? payload.TIPO_PAGO, {
+          defaultValue: "Efectivo"
+        }),
+        monto: total
+      }
+    ];
+  }
+  const paidTotal = round2(paymentSplit.reduce((acc, row) => acc + row.monto, 0));
+  if (round2(paidTotal) !== round2(total)) {
+    throw buildError(400, `La suma de pagos (${paidTotal.toFixed(2)}) debe coincidir con el total (${total.toFixed(2)}).`);
+  }
+  const tipoPago =
+    paymentSplit.length === 1
+      ? paymentSplit[0].tipoPago
+      : paymentSplit.map((row) => `${row.tipoPago} S/${row.monto.toFixed(2)}`).join(" + ");
+
+  for (const item of items) {
+    products[item.index] = { ...item.product, STOCK_ACTUAL: item.stockAfter };
+  }
+  await writeProducts(products);
+
+  const sales = await readSales();
+  let nextSaleId = sales.reduce((max, item) => Math.max(max, item.ID_VENTA || 0), 0) + 1;
+  const createdSales = [];
+  const createdMovements = [];
+  const updatedProducts = [];
+
+  for (const item of items) {
+    const sale = {
+      ID_VENTA: nextSaleId++,
+      FECHA: fecha,
+      "NÂ°": item.product["NÂ°"],
+      NOMBRE: item.product.NOMBRE,
+      CANTIDAD: item.cantidad,
+      PRECIO: item.price,
+      TOTAL: item.total,
+      TIPO_PAGO: tipoPago,
+      TIPO_PAGO_DETALLE: tipoPago,
+      ORIGEN: origin
+    };
+    sales.push(sale);
+    createdSales.push(sale);
+    updatedProducts.push(products[item.index]);
+    createdMovements.push(
+      await appendKardexMovement({
+        "NÂ°": item.product["NÂ°"],
+        NOMBRE: item.product.NOMBRE,
+        TIPO: "SALIDA",
+        CANTIDAD: item.cantidad,
+        STOCK_ANTES: item.stockBefore,
+        STOCK_DESPUES: item.stockAfter,
+        REFERENCIA: `VENTA_DIARIA:${sale.ID_VENTA}`,
+        NOTA: nota || `Venta compuesta (${fecha})`
+      })
+    );
+  }
+  await writeSales(sales);
+
+  return {
+    sales: createdSales,
+    products: updatedProducts,
+    movements: createdMovements,
+    total,
+    tipoPago,
+    paymentSplit,
+    origen: origin
+  };
+}
+
 async function updateSale(idInput, payload) {
   const saleId = parseId(idInput);
   if (!saleId) throw buildError(400, "El id de la venta es invalido.");
@@ -1197,7 +1760,7 @@ async function updateSale(idInput, payload) {
 
   const currentSale = sales[saleIndex];
   const nextProductId = parseId(
-    payload["N°"] ?? payload.id ?? payload.productId ?? payload.productoId ?? currentSale["N°"]
+    payload["NÂ°"] ?? payload.id ?? payload.productId ?? currentSale["NÂ°"]
   );
   if (!nextProductId) throw buildError(400, "Debes indicar un producto valido.");
 
@@ -1211,7 +1774,10 @@ async function updateSale(idInput, payload) {
   }
 
   const nextQty = round2(parsedNextQty);
-  const nextFecha = parseIsoDate(payload.fecha ?? payload.FECHA) || currentSale.FECHA || todayIso();
+  const nextFecha =
+    parseIsoDate(payload.fecha_venta ?? payload.fechaVenta ?? payload.FECHA_VENTA ?? payload.fecha ?? payload.FECHA) ||
+    currentSale.FECHA ||
+    todayIso();
   if (!isBusinessDate(nextFecha)) {
     throw buildError(400, "La fecha de la venta es invalida.");
   }
@@ -1223,17 +1789,17 @@ async function updateSale(idInput, payload) {
   const nota = trimValue(payload.nota) || `Correccion de venta #${saleId}`;
 
   const products = await readProducts();
-  const currentProductId = Number(currentSale["N°"]);
+  const currentProductId = Number(currentSale["NÂ°"]);
   const currentQty = round2(Number(currentSale.CANTIDAD || 0));
 
-  const currentProductIndex = products.findIndex((item) => item["N°"] === currentProductId);
+  const currentProductIndex = products.findIndex((item) => item["NÂ°"] === currentProductId);
   if (currentProductIndex < 0) {
-    throw buildError(404, `No existe producto N° ${currentProductId} asociado a la venta.`);
+    throw buildError(404, `No existe producto NÂ° ${currentProductId} asociado a la venta.`);
   }
 
-  const nextProductIndex = products.findIndex((item) => item["N°"] === nextProductId);
+  const nextProductIndex = products.findIndex((item) => item["NÂ°"] === nextProductId);
   if (nextProductIndex < 0) {
-    throw buildError(404, `No existe producto con N° ${nextProductId}.`);
+    throw buildError(404, `No existe producto con NÂ° ${nextProductId}.`);
   }
 
   const stockMovementsPayload = [];
@@ -1247,7 +1813,7 @@ async function updateSale(idInput, payload) {
     if (stockAfter < 0) {
       throw buildError(
         400,
-        `Stock insuficiente para N° ${nextProductId}. Stock actual: ${stockBefore}.`
+        `Stock insuficiente para NÂ° ${nextProductId}. Stock actual: ${stockBefore}.`
       );
     }
 
@@ -1255,7 +1821,7 @@ async function updateSale(idInput, payload) {
 
     if (delta !== 0) {
       stockMovementsPayload.push({
-        "N°": product["N°"],
+        "NÂ°": product["NÂ°"],
         NOMBRE: product.NOMBRE,
         TIPO: delta > 0 ? "SALIDA" : "INGRESO",
         CANTIDAD: Math.abs(delta),
@@ -1277,7 +1843,7 @@ async function updateSale(idInput, payload) {
     if (targetStockAfter < 0) {
       throw buildError(
         400,
-        `Stock insuficiente para N° ${nextProductId}. Stock actual: ${targetStockBefore}.`
+        `Stock insuficiente para NÂ° ${nextProductId}. Stock actual: ${targetStockBefore}.`
       );
     }
 
@@ -1285,7 +1851,7 @@ async function updateSale(idInput, payload) {
     products[nextProductIndex] = { ...targetProduct, STOCK_ACTUAL: targetStockAfter };
 
     stockMovementsPayload.push({
-      "N°": currentProduct["N°"],
+      "NÂ°": currentProduct["NÂ°"],
       NOMBRE: currentProduct.NOMBRE,
       TIPO: "INGRESO",
       CANTIDAD: currentQty,
@@ -1296,7 +1862,7 @@ async function updateSale(idInput, payload) {
     });
 
     stockMovementsPayload.push({
-      "N°": targetProduct["N°"],
+      "NÂ°": targetProduct["NÂ°"],
       NOMBRE: targetProduct.NOMBRE,
       TIPO: "SALIDA",
       CANTIDAD: nextQty,
@@ -1318,12 +1884,15 @@ async function updateSale(idInput, payload) {
     ...currentSale,
     ID_VENTA: saleId,
     FECHA: nextFecha,
-    "N°": finalProduct["N°"],
+    "NÂ°": finalProduct["NÂ°"],
     NOMBRE: finalProduct.NOMBRE,
     CANTIDAD: nextQty,
     PRECIO: finalPrice,
     TOTAL: round2(finalPrice * nextQty),
     TIPO_PAGO: nextTipoPago,
+    TIPO_PAGO_DETALLE: trimValue(
+      payload.tipoPagoDetalle ?? payload.TIPO_PAGO_DETALLE ?? currentSale.TIPO_PAGO_DETALLE ?? nextTipoPago
+    ),
     ORIGEN: trimValue(currentSale.ORIGEN) || "MANUAL"
   };
 
@@ -1343,11 +1912,124 @@ async function updateSale(idInput, payload) {
   };
 }
 
+async function registerStockIngress(idInput, payload) {
+  const id = parseId(idInput);
+  if (!id) throw buildError(400, "El id del producto es invalido.");
+
+  const quantity = parseDecimal(payload.cantidad ?? payload.CANTIDAD);
+  if (quantity === null || quantity <= 0) {
+    throw buildError(400, "La cantidad de ingreso debe ser mayor a 0.");
+  }
+
+  const products = await readProducts();
+  const index = products.findIndex((item) => item["Nï¿½"] === id);
+  if (index < 0) throw buildError(404, `No existe producto con Nï¿½ ${id}.`);
+
+  const current = products[index];
+  const stockBefore = round2(Number(current.STOCK_ACTUAL || 0));
+  const stockAfter = round2(stockBefore + quantity);
+  const updated = { ...current, STOCK_ACTUAL: stockAfter };
+
+  products[index] = updated;
+  await writeProducts(products);
+
+  const movement = await appendKardexMovement({
+    "Nï¿½": updated["Nï¿½"],
+    NOMBRE: updated.NOMBRE,
+    TIPO: "INGRESO",
+    CANTIDAD: round2(quantity),
+    STOCK_ANTES: stockBefore,
+    STOCK_DESPUES: stockAfter,
+    REFERENCIA: trimValue(payload.referencia ?? payload.REFERENCIA) || "INGRESO_MANUAL",
+    NOTA: trimValue(payload.nota ?? payload.NOTA) || "Ingreso manual"
+  });
+
+  return {
+    product: updated,
+    movement
+  };
+}
+
+async function deleteSale(idInput, payload = {}) {
+  const saleId = parseId(idInput);
+  if (!saleId) throw buildError(400, "El id de la venta es invalido.");
+
+  const sales = await readSales();
+  const saleIndex = sales.findIndex((item) => Number(item.ID_VENTA) === saleId);
+  if (saleIndex < 0) throw buildError(404, `No existe venta con ID ${saleId}.`);
+
+  const sale = sales[saleIndex];
+  const productId = Number(sale["Nï¿½"]);
+  const quantity = round2(Number(sale.CANTIDAD || 0));
+  const products = await readProducts();
+  const productIndex = products.findIndex((item) => item["Nï¿½"] === productId);
+  if (productIndex < 0) {
+    throw buildError(404, `No existe producto Nï¿½ ${productId} asociado a la venta.`);
+  }
+
+  const product = products[productIndex];
+  const stockBefore = round2(Number(product.STOCK_ACTUAL || 0));
+  const stockAfter = round2(stockBefore + quantity);
+  const updatedProduct = { ...product, STOCK_ACTUAL: stockAfter };
+  products[productIndex] = updatedProduct;
+
+  sales.splice(saleIndex, 1);
+  await writeProducts(products);
+  await writeSales(sales);
+
+  const reason =
+    trimValue(payload.motivo ?? payload.anulada_motivo ?? payload.reason) ||
+    `Anulacion manual venta #${saleId}`;
+  const movement = await appendKardexMovement({
+    "Nï¿½": updatedProduct["Nï¿½"],
+    NOMBRE: updatedProduct.NOMBRE,
+    TIPO: "INGRESO",
+    CANTIDAD: quantity,
+    STOCK_ANTES: stockBefore,
+    STOCK_DESPUES: stockAfter,
+    REFERENCIA: `VENTA_ANULADA:${saleId}`,
+    NOTA: reason
+  });
+
+  return {
+    ok: true,
+    sale: {
+      ...sale,
+      ESTADO: "ANULADA",
+      ANULADA_AT: nowIsoDateTime(),
+      ANULADA_MOTIVO: reason
+    },
+    product: updatedProduct,
+    movement
+  };
+}
+
+async function deleteKardexMovement(idInput) {
+  const movementId = parseId(idInput);
+  if (!movementId) throw buildError(400, "El id del movimiento es invalido.");
+
+  const movements = await readKardex();
+  const index = movements.findIndex((item) => Number(item.ID_MOV) === movementId);
+  if (index < 0) throw buildError(404, `No existe movimiento kardex #${movementId}.`);
+
+  const [removed] = movements.splice(index, 1);
+  await writeKardex(movements);
+  return removed;
+}
+
+async function deleteAllKardexMovements() {
+  const movements = await readKardex();
+  const deletedCount = movements.length;
+  await writeKardex([]);
+  return { deletedCount };
+}
+
 module.exports = {
   BASE_CSV_PATH,
   DEFAULT_PRODUCTS_CSV_PATH,
   VENTAS_CSV_PATH,
   KARDEX_CSV_PATH,
+  PURCHASE_PRICE_HISTORY_CSV_PATH,
   SOURCE_CONFIG_PATH,
   ensureProductsCsv,
   ensureInventoryData,
@@ -1362,10 +2044,19 @@ module.exports = {
   readProducts,
   readSales,
   readKardex,
+  readProductPurchasePriceHistory,
   createProduct,
   updateProduct,
   deleteProduct,
+  registerStockIngress,
   registerSale,
+  registerSaleBatch,
   updateSale,
+  deleteSale,
+  deleteKardexMovement,
+  deleteAllKardexMovements,
   rebuildProductsCsvFromBase
 };
+
+
+

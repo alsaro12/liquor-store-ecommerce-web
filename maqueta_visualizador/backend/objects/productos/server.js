@@ -10,7 +10,9 @@ function createProductosObjectServer(deps) {
     getProductStats,
     handleProductsCollection,
     handleProductsById,
-    handleProductStockIngress
+    handleProductStockIngress,
+    handleProductMovementsHistory,
+    handleProductPurchasePriceHistory
   } = deps;
 
   return async function handleProductosObjectRoute(req, res, pathname, query) {
@@ -24,7 +26,8 @@ function createProductosObjectServer(deps) {
         sendText(res, 405, "Metodo no permitido.");
         return true;
       }
-      const items = await readProductsAll();
+      const includeImages = query.get("images") === "1" || query.get("includeImages") === "1";
+      const items = await readProductsAll({ includeImages });
       sendJson(res, 200, items);
       return true;
     }
@@ -39,15 +42,27 @@ function createProductosObjectServer(deps) {
       return true;
     }
 
-    const productIngressMatch = pathname.match(/^\/api\/productos\/(\d+)\/ingreso\/?$/);
-    if (productIngressMatch) {
-      await handleProductStockIngress(req, res, productIngressMatch[1]);
-      return true;
-    }
+  const productIngressMatch = pathname.match(/^\/api\/productos\/(\d+)\/ingreso\/?$/);
+  if (productIngressMatch) {
+    await handleProductStockIngress(req, res, productIngressMatch[1]);
+    return true;
+  }
+
+  const productMovementsMatch = pathname.match(/^\/api\/productos\/(\d+)\/movimientos\/?$/);
+  if (productMovementsMatch) {
+    await handleProductMovementsHistory(req, res, productMovementsMatch[1], query);
+    return true;
+  }
+
+  const productPurchaseHistoryMatch = pathname.match(/^\/api\/productos\/(\d+)\/precios-compra\/?$/);
+  if (productPurchaseHistoryMatch) {
+    await handleProductPurchasePriceHistory(req, res, productPurchaseHistoryMatch[1], query);
+    return true;
+  }
 
     const productMatch = pathname.match(/^\/api\/productos\/(\d+)\/?$/);
     if (productMatch) {
-      await handleProductsById(req, res, productMatch[1]);
+      await handleProductsById(req, res, productMatch[1], query);
       return true;
     }
 

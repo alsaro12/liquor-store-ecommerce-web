@@ -1,13 +1,17 @@
 (function () {
   const { esc, formatQty } = window.AppCustomFunctions;
 
+  function getProductCode(item) {
+    return item["N\u00B0"] ?? item.N ?? item.ID ?? "-";
+  }
+
   function renderKardexRows(rows) {
     return rows
       .map(
         (item) => `
       <tr>
         <td>${esc(item.FECHA_HORA)}</td>
-        <td>${item["N°"]}</td>
+        <td>${esc(getProductCode(item))}</td>
         <td>${esc(item.NOMBRE)}</td>
         <td><span class="tag ${item.TIPO === "INGRESO" ? "is-ok" : "is-warn"}">${esc(item.TIPO)}</span></td>
         <td>${formatQty(item.CANTIDAD)}</td>

@@ -1,26 +1,28 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestion MySQL - Licoreria</title>
+    <title>Gestión MySQL - Licorería</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div class="bg-shape bg-shape-1"></div>
     <div class="bg-shape bg-shape-2"></div>
 
-    <main class="app-shell">
+    <main id="appShell" class="app-shell">
       <header class="hero">
         <div>
           <p class="eyebrow">Base Productos</p>
-          <h1>Gestion productos MySQL</h1>
+          <h1>Gestión de productos MySQL</h1>
           <p class="hero-copy">
             Administra productos, registra ventas diarias y controla movimientos de kardex sobre MySQL.
           </p>
-          <p id="appVersionLabel" class="hero-version">Version -</p>
+          <p id="appVersionLabel" class="hero-version">Versión -</p>
         </div>
-        <button id="reloadBtn" class="btn" type="button">Recargar</button>
+        <div class="hero-actions">
+          <button id="reloadBtn" class="btn" type="button">Recargar</button>
+        </div>
       </header>
 
       <div id="appMessage" class="message app-message" aria-live="polite"></div>
@@ -31,34 +33,63 @@
           <p class="db-status-label">Base de datos</p>
           <strong id="dbStatusText">Sin verificar</strong>
           <small id="dbStatusMeta">Pulsa "Reintentar" para validar conexión.</small>
-          <small id="dbStatusLastCheck">Ultima verificacion: -</small>
+          <small id="dbStatusLastCheck">Última verificación: -</small>
         </div>
         <div class="db-status-actions">
           <button id="dbStatusRefreshBtn" class="btn btn-ghost" type="button">Reintentar</button>
         </div>
       </section>
 
-      <div class="mobile-nav-wrap">
-        <button
-          id="mobileNavToggle"
-          class="btn btn-ghost mobile-nav-toggle"
-          type="button"
-          aria-controls="mainViewNav"
-          aria-expanded="false"
-        >
-          Secciones
-        </button>
-      </div>
+        <div class="mobile-nav-wrap">
+          <button
+            id="mobileNavToggle"
+            class="btn btn-ghost mobile-nav-toggle"
+            type="button"
+            aria-controls="mainViewNav"
+            aria-expanded="false"
+          >
+            <span class="mobile-nav-toggle-icon" aria-hidden="true">&#9776;</span>
+            <span class="mobile-nav-toggle-label">Secciones</span>
+          </button>
+        </div>
 
-      <nav id="mainViewNav" class="view-nav" aria-label="Navegacion principal">
+      <button
+        id="navOverlayBackdrop"
+        class="view-nav-backdrop"
+        type="button"
+        aria-label="Cerrar menú principal"
+        hidden
+      ></button>
+
+      <nav id="mainViewNav" class="view-nav" aria-label="Navegación principal">
+        <div class="view-nav-head">
+          <button
+            id="desktopNavToggle"
+            class="view-nav-brand view-nav-toggle"
+            type="button"
+            aria-expanded="true"
+            aria-controls="mainViewNav"
+            aria-label="Comprimir o expandir menú principal"
+            title="Comprimir o expandir menú principal"
+          >
+            <span class="view-nav-brand-icon" aria-hidden="true">&#9776;</span>
+            <div class="view-nav-brand-copy">
+              <strong class="view-nav-title">Menú principal</strong>
+              <small class="view-nav-subtitle">Acceso rápido</small>
+            </div>
+          </button>
+        </div>
         <button
           id="navSales"
           class="view-nav-btn is-active"
           data-view="sales"
           type="button"
           aria-selected="true"
+          aria-label="Ventas diarias"
+          title="Ventas diarias"
         >
-          Ventas diarias
+          <span class="view-nav-btn-icon" aria-hidden="true">VS</span>
+          <span class="view-nav-label">Ventas diarias</span>
         </button>
         <button
           id="navProducts"
@@ -66,8 +97,11 @@
           data-view="products"
           type="button"
           aria-selected="false"
+          aria-label="Gestión de productos"
+          title="Gestión de productos"
         >
-          Gestion de productos
+          <span class="view-nav-btn-icon" aria-hidden="true">PR</span>
+          <span class="view-nav-label">Gestión de productos</span>
         </button>
         <button
           id="navKardex"
@@ -75,8 +109,11 @@
           data-view="kardex"
           type="button"
           aria-selected="false"
+          aria-label="Kardex"
+          title="Kardex"
         >
-          Kardex
+          <span class="view-nav-btn-icon" aria-hidden="true">KD</span>
+          <span class="view-nav-label">Kardex</span>
         </button>
         <button
           id="navSettings"
@@ -84,8 +121,11 @@
           data-view="settings"
           type="button"
           aria-selected="false"
+          aria-label="Configuración"
+          title="Configuración"
         >
-          Settings
+          <span class="view-nav-btn-icon" aria-hidden="true">ST</span>
+          <span class="view-nav-label">Configuración</span>
         </button>
       </nav>
 
@@ -103,31 +143,164 @@
 
       <div id="kpiCollapsible" class="kpi-collapsible">
         <section class="kpi-grid">
-          <article class="kpi">
-            <p>Productos registrados</p>
-            <strong id="kpiProducts">0</strong>
+          <article class="kpi kpi-sales-session">
+            <button id="openCashCloseBtn" class="kpi-session-trigger" type="button" aria-label="Abrir cierre de caja">
+              <div class="kpi-head-left">
+                <span class="kpi-icon-badge kpi-icon-badge-green" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M6 4h12v14l-2-1.4L14 18l-2-1.4L10 18l-2-1.4L6 18V4Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+                    <path d="M9 8h6M9 12h6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+                  </svg>
+                </span>
+                <div class="kpi-head-copy">
+                  <span class="kpi-head-kicker">Sesión actual</span>
+                  <strong class="kpi-head-title">Cierre de caja</strong>
+                </div>
+              </div>
+              <span class="kpi-session-trigger-arrow" aria-hidden="true">›</span>
+            </button>
+            <small id="kpiShiftSalesMeta">Total vendido del turno</small>
+            <strong id="kpiShiftSalesAmount">S/ 0.00</strong>
+            <div class="kpi-divider" aria-hidden="true"></div>
+            <div class="kpi-sales-session-grid">
+              <article class="kpi-sales-session-stat">
+                <span class="kpi-sales-session-stat-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <circle cx="9" cy="19" r="1.7" fill="currentColor"/>
+                    <circle cx="17" cy="19" r="1.7" fill="currentColor"/>
+                    <path d="M3 5h2l1.7 8.2h9.9l2-6.2H7.1" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <span>Ventas</span>
+                <strong id="kpiSalesCountValue">0</strong>
+              </article>
+              <article class="kpi-sales-session-stat">
+                <span class="kpi-sales-session-stat-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M7 3h10v16l-2-1.2-2 1.2-2-1.2-2 1.2-2-1.2V3Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+                    <path d="M9 8h6M9 12h4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+                  </svg>
+                </span>
+                <span>Prom. venta</span>
+                <strong id="kpiAverageTicketValue">S/ 0.00</strong>
+              </article>
+            </div>
           </article>
-          <article class="kpi">
-            <p>Ventas en el rango seleccionado</p>
-            <strong id="kpiSalesRangeAmount">S/ 0.00</strong>
+          <article class="kpi kpi-inventory-flow">
+            <div class="kpi-head">
+              <div class="kpi-head-left">
+                <span class="kpi-icon-badge kpi-icon-badge-blue" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M12 3 4.5 7.2V17L12 21l7.5-4V7.2L12 3Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+                    <path d="M12 3v8m0 0 7.5-3.8M12 11 4.5 7.2" stroke="currentColor" stroke-width="1.9"/>
+                  </svg>
+                </span>
+                <strong class="kpi-head-title">Flujo de inventario</strong>
+              </div>
+              <span class="kpi-arrow-ghost" aria-hidden="true">›</span>
+            </div>
+              <div class="kpi-inventory-flow-grid">
+                <div class="kpi-inventory-stat kpi-inventory-stat-active">
+                  <span>Activos</span>
+                  <strong id="kpiInventoryActiveCount">0</strong>
+                </div>
+                <div class="kpi-inventory-stat kpi-inventory-stat-out">
+                  <span>Salidas</span>
+                  <strong id="kpiInventoryOutCount">0</strong>
+                </div>
+                <div class="kpi-inventory-stat kpi-inventory-stat-in">
+                  <span>Entradas</span>
+                  <strong id="kpiInventoryInCount">0</strong>
+                </div>
+            </div>
+            <div class="kpi-inventory-bar" aria-hidden="true">
+              <span id="kpiInventoryActiveBar"></span>
+            </div>
+            <div class="kpi-inventory-foot">
+              <span class="kpi-inventory-foot-label" id="kpiShiftProductsMeta">Turno activo</span>
+              <span class="kpi-inventory-foot-range" id="kpiShiftElapsed">0 h</span>
+            </div>
           </article>
-          <article class="kpi">
-            <p>Cantidad de ventas en el rango seleccionado</p>
-            <strong id="kpiSales">0</strong>
+          <article class="kpi kpi-stock-watch">
+            <div class="kpi-head">
+              <div class="kpi-head-left">
+                <span class="kpi-icon-badge kpi-icon-badge-amber" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M12 4a4 4 0 0 0-4 4v2.3c0 .8-.3 1.5-.9 2.1L6 13.6V15h12v-1.4l-1.1-1.2a3 3 0 0 1-.9-2.1V8a4 4 0 0 0-4-4Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+                    <path d="M10.2 17a2 2 0 0 0 3.6 0" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+                  </svg>
+                </span>
+                <strong class="kpi-head-title">Alertas de stock</strong>
+              </div>
+              <span class="kpi-collapse-dot" aria-hidden="true">⌃</span>
+            </div>
+            <div class="kpi-stock-watch-list">
+              <button id="kpiOutOfStockBtn" class="kpi-stock-alert kpi-stock-alert-out" type="button">
+                <span id="kpiOutOfStockCount" class="kpi-stock-alert-count">0</span>
+                <span class="kpi-stock-alert-copy">
+                  <strong>Sin stock</strong>
+                </span>
+                <span class="kpi-stock-alert-arrow" aria-hidden="true">›</span>
+              </button>
+              <button id="kpiLowStockBtn" class="kpi-stock-alert kpi-stock-alert-low" type="button">
+                <span id="kpiLowStockCount" class="kpi-stock-alert-count">0</span>
+                <span class="kpi-stock-alert-copy">
+                  <strong>Stock bajo</strong>
+                </span>
+                <span class="kpi-stock-alert-arrow" aria-hidden="true">›</span>
+              </button>
+            </div>
+            <div class="kpi-stock-watch-actions">
+              <button id="kpiInventoryIngressBtn" class="kpi-stock-watch-action kpi-stock-watch-action-soft" type="button" data-action="open-inventory-ingress" onclick="window.openInventoryReceiptDialog ? window.openInventoryReceiptDialog() : document.getElementById('inventoryReceiptDialog')?.showModal()">+ Ingresar inventario</button>
+              <button id="kpiCreateOrderBtn" class="kpi-stock-watch-action" type="button">+ Reporte de pedido</button>
+            </div>
           </article>
-          <article class="kpi">
-            <p>Movimientos kardex en el rango seleccionado</p>
-            <strong id="kpiKardex">0</strong>
+          <article class="kpi kpi-leaderboard">
+            <div class="kpi-head">
+              <div class="kpi-head-left">
+                <span class="kpi-icon-badge kpi-icon-badge-emerald" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="9" r="4.2" stroke="currentColor" stroke-width="1.9"/>
+                    <path d="m9 13.4-1.8 6L12 17l4.8 2.4-1.8-6" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <strong class="kpi-head-title">Resumen líder</strong>
+              </div>
+              <span class="kpi-leaderboard-badge">En vivo</span>
+            </div>
+            <section class="kpi-leaderboard-section">
+              <div class="kpi-leaderboard-pill">
+                <strong id="kpiTopPaymentShare">0%</strong>
+              </div>
+              <div class="kpi-leaderboard-copy">
+                <span>Método de pago líder</span>
+                <strong id="kpiTopPaymentMethod">Sin ventas</strong>
+                <small id="kpiTopPaymentMeta">Sin movimientos todavía.</small>
+              </div>
+            </section>
+            <div class="kpi-leaderboard-divider" aria-hidden="true"></div>
+            <section class="kpi-leaderboard-section">
+              <div class="kpi-leaderboard-product-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M10 3h4v3l-1.2 1.3v2.2l2.8 3.9V20H8.4v-6.6l2.8-3.9V7.3L10 6V3Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="kpi-leaderboard-copy">
+                <span>Categoría más vendida</span>
+                <strong id="kpiTopProductName">Sin ventas</strong>
+                <small id="kpiTopProductMeta">Aún no hay categoría líder en el turno.</small>
+              </div>
+            </section>
           </article>
         </section>
       </div>
 
       <section class="panel" data-view-panel="products">
         <div class="panel-header panel-header-stack">
-          <h2>Listado y edicion de productos</h2>
+          <h2>Listado y edición de productos</h2>
           <div class="table-toolbar">
             <label class="search-bar" for="crudSearch">
-              <span class="search-icon" aria-hidden="true">⌕</span>
+              <span class="search-icon" aria-hidden="true">&#8981;</span>
               <input id="crudSearch" type="search" placeholder="Buscar por N°, nombre, categoría, estado, precio o stock" />
             </label>
             <button id="openCreateBtn" class="btn" type="button">Crear producto</button>
@@ -142,37 +315,52 @@
               <tr>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="products" data-sort-key="N°">
-                    N° <span class="sort-indicator" aria-hidden="true">↕</span>
+                    N° <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="products" data-sort-key="NOMBRE">
-                    NOMBRE <span class="sort-indicator" aria-hidden="true">↕</span>
+                    NOMBRE <span class="sort-indicator" aria-hidden="true">&#8597;</span>
+                  </button>
+                </th>
+                <th class="sort-head product-table-code-head">
+                  <button class="sort-btn" type="button" data-sort-table="products" data-sort-key="IMAGENES">
+                    PORTADA <span class="sort-indicator" aria-hidden="true">&#8597;</span>
+                  </button>
+                </th>
+                <th class="sort-head">
+                  <button class="sort-btn" type="button" data-sort-table="products" data-sort-key="DESCRIPCION">
+                    DESCRIPCIÓN <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="products" data-sort-key="CATEGORIA">
-                    CATEGORIA <span class="sort-indicator" aria-hidden="true">↕</span>
+                    CATEGORÍA <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="products" data-sort-key="PRECIO">
-                    PRECIO <span class="sort-indicator" aria-hidden="true">↕</span>
-                  </button>
-                </th>
-                <th class="sort-head">
-                  <button class="sort-btn" type="button" data-sort-table="products" data-sort-key="PEDIDO">
-                    PEDIDO <span class="sort-indicator" aria-hidden="true">↕</span>
+                    PRECIO <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="products" data-sort-key="STOCK_ACTUAL">
-                    STOCK <span class="sort-indicator" aria-hidden="true">↕</span>
+                    STOCK <span class="sort-indicator" aria-hidden="true">&#8597;</span>
+                  </button>
+                </th>
+                <th class="sort-head">
+                  <button class="sort-btn" type="button" data-sort-table="products" data-sort-key="STOCK_MAXIMO">
+                    STOCK MÁXIMO <span class="sort-indicator" aria-hidden="true">&#8597;</span>
+                  </button>
+                </th>
+                <th class="sort-head">
+                  <button class="sort-btn" type="button" data-sort-table="products" data-sort-key="ALERTA_STOCK">
+                    ALERTA <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="products" data-sort-key="ESTADO">
-                    ESTADO <span class="sort-indicator" aria-hidden="true">↕</span>
+                    ESTADO <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th>ACCIONES</th>
@@ -197,98 +385,107 @@
                 <option value="50">50</option>
               </select>
             </label>
-            <span id="crudPageInfo">Pagina 1 de 1</span>
+            <span id="crudPageInfo">Página 1 de 1</span>
           </div>
         </div>
       </section>
 
       <section class="panel is-active" data-view-panel="sales">
         <div class="panel-header panel-header-stack">
-          <div class="sales-main-tools">
-            <div class="sales-quick-card">
-              <div>
-                <h2>Ventas diarias</h2>
-                <p class="sales-quick-copy">Registra una venta en una ventana rápida y mantén los filtros limpios.</p>
+          <div class="sales-main-tools sales-dashboard">
+            <section class="sales-command-card">
+              <div class="sales-command-top">
+                <div class="sales-hero-copy">
+                  <p class="sales-section-eyebrow">Operacion nocturna</p>
+                  <h2>Ventas diarias</h2>
+                  <div class="sales-hero-notes">
+                    <span class="sales-note-pill">Turno operativo: 6:00 p. m. a 5:00 a. m.</span>
+                    <span class="sales-note-pill sales-note-pill-soft">Corte contable: 5:00 a. m.</span>
+                  </div>
+                </div>
+                <div class="sales-quick-actions sales-hero-actions">
+                  <button id="openSaleDialogBtn" class="btn sales-touch-btn" type="button">Nueva venta rapida</button>
+                  <button id="exportSalesCsvBtn" class="btn btn-ghost sales-touch-btn" type="button">Exportar Excel</button>
+                </div>
               </div>
-              <div class="sales-quick-actions">
-                <button id="openSaleDialogBtn" class="btn" type="button">Nueva venta rápida</button>
-                <button id="exportSalesCsvBtn" class="btn btn-ghost" type="button">Exportar Excel</button>
+              <div class="sales-command-bottom">
+                <div class="sales-command-filter-head">
+                  <p class="sales-card-kicker">Filtro operativo</p>
+                  <h3>Consulta por turno operativo</h3>
+                </div>
+                <div class="sales-tools sales-tools-compact">
+                  <div class="sales-date-range sales-date-range-compact">
+                    <label>
+                      Turno desde
+                      <input id="salesDateFrom" type="date" />
+                      <small id="salesDateFromHint" class="sales-date-hint">Turno -</small>
+                    </label>
+                    <label>
+                      Turno hasta
+                      <input id="salesDateTo" type="date" />
+                      <small id="salesDateToHint" class="sales-date-hint">Turno -</small>
+                    </label>
+                    <button id="salesDateTodayBtn" class="btn btn-ghost sales-date-today" type="button">HOY</button>
+                  </div>
+                  <label class="search-bar sales-search-bar" for="salesSearch">
+                    <span class="search-icon" aria-hidden="true">&#8981;</span>
+                    <input id="salesSearch" type="search" placeholder="Buscar por turno, N° o nombre" />
+                  </label>
+                </div>
               </div>
-            </div>
-            <div class="sales-tools">
-              <div class="sales-date-range">
-                <label>
-                  Desde
-                  <input id="salesDateFrom" type="date" />
-                </label>
-                <label>
-                  Hasta
-                  <input id="salesDateTo" type="date" />
-                </label>
-                <button id="salesDateTodayBtn" class="btn btn-ghost sales-date-today" type="button">Hoy</button>
-              </div>
-              <label class="search-bar" for="salesSearch">
-                <span class="search-icon" aria-hidden="true">⌕</span>
-                <input id="salesSearch" type="search" placeholder="Buscar por fecha venta/operativa, N° o nombre" />
-              </label>
-            </div>
+            </section>
           </div>
         </div>
 
         <div id="saleMessage" class="message" aria-live="polite"></div>
 
-        <div class="table-wrap">
+        <div class="table-wrap sales-table-wrap">
           <table id="salesTable">
             <thead>
               <tr>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="sales" data-sort-key="FECHA_VENTA">
-                    FECHA VENTA <span class="sort-indicator" aria-hidden="true">↕</span>
+                    TURNO <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
-                  <button class="sort-btn" type="button" data-sort-table="sales" data-sort-key="FECHA_OPERATIVA">
-                    FECHA OPERATIVA <span class="sort-indicator" aria-hidden="true">↕</span>
+                  <button class="sort-btn" type="button" data-sort-table="sales" data-sort-key="FECHA_REFERENCIA">
+                    FECHA/HORA <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="sales" data-sort-key="N°">
-                    N° <span class="sort-indicator" aria-hidden="true">↕</span>
+                    N° <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="sales" data-sort-key="NOMBRE">
-                    NOMBRE <span class="sort-indicator" aria-hidden="true">↕</span>
+                    NOMBRE <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="sales" data-sort-key="CANTIDAD">
-                    CANTIDAD <span class="sort-indicator" aria-hidden="true">↕</span>
+                    CANTIDAD <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="sales" data-sort-key="PRECIO">
-                    PRECIO <span class="sort-indicator" aria-hidden="true">↕</span>
+                    PRECIO <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="sales" data-sort-key="TOTAL">
-                    TOTAL <span class="sort-indicator" aria-hidden="true">↕</span>
+                    TOTAL <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="sales" data-sort-key="TIPO_PAGO">
-                    TIPO PAGO <span class="sort-indicator" aria-hidden="true">↕</span>
-                  </button>
-                </th>
-                <th class="sort-head">
-                  <button class="sort-btn" type="button" data-sort-table="sales" data-sort-key="ORIGEN">
-                    ORIGEN <span class="sort-indicator" aria-hidden="true">↕</span>
+                    TIPO PAGO <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="sales" data-sort-key="ESTADO">
-                    ESTADO <span class="sort-indicator" aria-hidden="true">↕</span>
+                    ESTADO <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th>ACCIONES</th>
@@ -314,7 +511,7 @@
                 <option value="100">100</option>
               </select>
             </label>
-            <span id="salesPageInfo">Pagina 1 de 1</span>
+            <span id="salesPageInfo">Página 1 de 1</span>
           </div>
         </div>
       </section>
@@ -324,7 +521,7 @@
           <h2>Kardex (desde ahora)</h2>
           <div class="table-toolbar table-toolbar-kardex">
             <label class="search-bar" for="kardexSearch">
-              <span class="search-icon" aria-hidden="true">⌕</span>
+              <span class="search-icon" aria-hidden="true">&#8981;</span>
               <input id="kardexSearch" type="search" placeholder="Buscar por N°, nombre, referencia o nota" />
             </label>
             <select id="kardexTypeFilter" aria-label="Filtrar tipo kardex">
@@ -349,42 +546,42 @@
               <tr>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="kardex" data-sort-key="FECHA_HORA">
-                    FECHA/HORA <span class="sort-indicator" aria-hidden="true">↕</span>
+                    FECHA/HORA <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="kardex" data-sort-key="N°">
-                    N° <span class="sort-indicator" aria-hidden="true">↕</span>
+                    N° <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="kardex" data-sort-key="NOMBRE">
-                    NOMBRE <span class="sort-indicator" aria-hidden="true">↕</span>
+                    NOMBRE <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="kardex" data-sort-key="TIPO">
-                    TIPO <span class="sort-indicator" aria-hidden="true">↕</span>
+                    TIPO <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="kardex" data-sort-key="CANTIDAD">
-                    CANTIDAD <span class="sort-indicator" aria-hidden="true">↕</span>
+                    CANTIDAD <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="kardex" data-sort-key="STOCK_ANTES">
-                    ANTES <span class="sort-indicator" aria-hidden="true">↕</span>
+                    ANTES <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="kardex" data-sort-key="STOCK_DESPUES">
-                    DESPUES <span class="sort-indicator" aria-hidden="true">↕</span>
+                    DESPUES <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th class="sort-head">
                   <button class="sort-btn" type="button" data-sort-table="kardex" data-sort-key="REFERENCIA">
-                    REFERENCIA <span class="sort-indicator" aria-hidden="true">↕</span>
+                    REFERENCIA <span class="sort-indicator" aria-hidden="true">&#8597;</span>
                   </button>
                 </th>
                 <th>ACCIONES</th>
@@ -397,7 +594,7 @@
 
       <section class="panel" data-view-panel="settings">
         <div class="panel-header panel-header-stack">
-          <h2>Settings de conexion</h2>
+          <h2>Configuración de conexión</h2>
           <p class="settings-copy">
             Define la URL base del servidor donde vive la API MySQL.
           </p>
@@ -419,8 +616,9 @@
             <button id="useCurrentOriginBtn" class="btn btn-ghost" type="button">
               Usar URL de esta pestaña
             </button>
-            <button id="testApiBaseBtn" class="btn btn-alt" type="button">Probar conexion</button>
+            <button id="testApiBaseBtn" class="btn btn-alt" type="button">Probar conexión</button>
             <button id="testCpanelDbBtn" class="btn btn-alt" type="button">Probar DB cPanel</button>
+            <button id="openOnboardingBtn" class="btn btn-ghost" type="button">Ver guía de primera venta</button>
           </div>
         </form>
 
@@ -442,7 +640,7 @@
               aria-label="Access host detectado para cPanel"
             />
             <button id="copyAccessHostBtn" class="btn btn-ghost settings-access-copy-btn" type="button">
-              <span aria-hidden="true">📋</span>
+              <span aria-hidden="true">ðŸ“‹</span>
               Copiar
             </button>
             <button id="refreshAccessHostBtn" class="btn btn-alt" type="button">Detectar host</button>
@@ -466,144 +664,623 @@
     </main>
 
     <dialog id="saleDialog" class="sale-dialog">
-      <div class="dialog-head">
-        <h3 id="saleDialogTitle">Registrar venta diaria</h3>
-        <button id="saleDialogCloseBtn" class="dialog-close" type="button" aria-label="Cerrar">×</button>
-      </div>
-
-      <form id="saleForm" class="sale-form sale-dialog-form">
-        <label class="full-row sale-product-field">
-          Producto
-          <div class="sale-product-picker">
-            <input
-              id="saleProductLookup"
-              type="search"
-              placeholder="Busca por código o nombre"
-              autocomplete="off"
-              required
-            />
-            <button
-              id="saleProductClearBtn"
-              class="sale-product-clear"
-              type="button"
-              aria-label="Limpiar búsqueda de producto"
-            >
-              ×
-            </button>
+      <div class="dialog-head sale-dialog-head">
+        <div class="sale-dialog-heading">
+          <h3 id="saleDialogTitle">NUEVA VENTA RÁPIDA</h3>
+          <div class="sale-dialog-meta-row">
+            <span id="saleQuickDate" class="sale-meta-chip">--/--/----</span>
+            <span id="saleQuickTime" class="sale-meta-now">Turno -</span>
           </div>
-          <div id="saleProductDropdown" class="sale-product-dropdown" role="listbox" hidden></div>
-          <small class="sale-product-hint">Escribe código o parte del nombre y toca para seleccionar.</small>
-          <input id="saleProductId" type="hidden" />
-        </label>
-        <label>
-          Cantidad
-          <div class="sale-qty-control">
-            <button id="saleQtyDownBtn" class="sale-qty-step" type="button" aria-label="Disminuir cantidad">-</button>
-            <input id="saleCantidad" type="number" min="1" step="1" required value="1" />
-            <button id="saleQtyUpBtn" class="sale-qty-step" type="button" aria-label="Aumentar cantidad">+</button>
-          </div>
-        </label>
-        <label>
-          Precio unitario
-          <input id="salePrecioPreview" class="sale-preview-field" type="text" readonly value="-" />
-        </label>
-        <label>
-          Total estimado
-          <input id="saleTotalPreview" class="sale-preview-field" type="text" readonly value="-" />
-        </label>
-        <label>
-          Fecha
-          <input id="saleFecha" type="date" required />
-        </label>
-        <label>
-          Tipo de pago
-          <select id="saleTipoPago" required>
-            <option value="Efectivo" selected>Efectivo</option>
-            <option value="A Ya Per">A Ya Per</option>
-            <option value="Pedido Ya">Pedido Ya</option>
-            <option value="Rappi">Rappi</option>
-            <option value="EasyPay">EasyPay</option>
-          </select>
-        </label>
-        <label class="full-row">
-          Nota
-          <input id="saleNota" type="text" maxlength="120" placeholder="Opcional" />
-        </label>
-        <div class="sale-actions full-row">
-          <button id="saleSubmitBtn" class="btn" type="submit">Confirmar venta</button>
-          <button id="saleCancelBtn" class="btn btn-alt" type="button">Cancelar</button>
         </div>
-        <section id="saleConfirmBox" class="sale-confirm-box full-row" hidden>
-          <h4 id="saleConfirmTitle">Confirmar venta</h4>
-          <div class="sale-confirm-grid">
-            <p><span>Producto</span><strong id="saleConfirmProduct">-</strong></p>
-            <p><span>Cantidad</span><strong id="saleConfirmCantidad">-</strong></p>
-            <p><span>Fecha</span><strong id="saleConfirmFecha">-</strong></p>
-            <p><span>Tipo de pago</span><strong id="saleConfirmTipoPago">-</strong></p>
-            <p><span>Total</span><strong id="saleConfirmTotal">-</strong></p>
-          </div>
-          <div class="sale-confirm-actions">
-            <button id="saleConfirmBackBtn" class="btn btn-ghost" type="button">Volver a editar</button>
-            <button id="saleConfirmSubmitBtn" class="btn" type="button">Guardar venta</button>
-          </div>
-        </section>
+        <button id="saleDialogCloseBtn" class="dialog-close" type="button" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="sale-dialog-divider" aria-hidden="true"></div>
+
+      <form id="saleForm" class="sale-form sale-dialog-form" novalidate>
+        <div class="sale-dialog-shell full-row">
+          <section class="sale-form-main">
+            <label class="full-row sale-product-field">
+              <span class="sale-section-label">
+                <span class="sale-inline-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+                    <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                    <path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                  </svg>
+                </span>
+                Producto
+              </span>
+              <div class="sale-product-row">
+                <div class="sale-product-picker">
+                  <input
+                    id="saleProductLookup"
+                    type="search"
+                    placeholder="Buscar producto por nombre, SKU o código de barras..."
+                    autocomplete="off"
+                  />
+                  <button
+                    id="saleProductClearBtn"
+                    class="sale-product-clear"
+                    type="button"
+                    aria-label="Limpiar búsqueda de producto"
+                    >
+                      &times;
+                    </button>
+                </div>
+                <div id="saleProductDropdown" class="sale-product-dropdown" role="listbox" hidden></div>
+               </div>
+              <input id="saleProductId" type="hidden" />
+              <input id="saleCantidad" type="number" min="1" step="1" required value="1" hidden />
+            </label>
+
+            <section id="saleItemsBlock" class="full-row sale-items-block">
+              <div class="sale-items-head">
+                <h4>
+                  <span class="sale-section-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+                      <path d="M7 6h14l-1.3 6.2a2 2 0 0 1-2 1.6H9.2a2 2 0 0 1-2-1.5L5.4 4.5H2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                      <circle cx="10" cy="18.5" r="1.5" fill="currentColor"/>
+                      <circle cx="17.5" cy="18.5" r="1.5" fill="currentColor"/>
+                    </svg>
+                  </span>
+                  Carrito
+                </h4>
+                <span id="saleItemsCount" class="sale-items-count">0 items</span>
+              </div>
+              <div class="sale-items-wrap">
+                <table class="sale-items-table">
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th>Disp.</th>
+                      <th>Cant.</th>
+                      <th>Precio</th>
+                      <th>Total</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="saleItemsBody"></tbody>
+                </table>
+                <p id="saleItemsEmpty" class="sale-items-empty">Aún no agregaste productos.</p>
+              </div>
+            </section>
+
+            <input id="saleTipoVenta" type="hidden" value="MANUAL" />
+            <input id="salePrecioPreview" class="sale-preview-field" type="text" readonly value="-" hidden />
+            <input id="saleTipoPago" type="hidden" value="Efectivo" />
+
+              <section id="salePaymentBlock" class="full-row sale-payment-block">
+                <div class="sale-payment-head">
+                  <h4>
+                    <span class="sale-section-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+                        <rect x="3" y="6" width="18" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                        <path d="M3 10h18" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                        <circle cx="17" cy="14" r="1.2" fill="currentColor"/>
+                      </svg>
+                    </span>
+                    Pagos
+                  </h4>
+                  <button id="saleAddPaymentBtn" class="btn btn-ghost" type="button">+ Pago</button>
+                </div>
+                <div id="salePaymentRows" class="sale-payment-rows"></div>
+              <label class="sale-payment-note">
+                Nota
+                <input id="saleNota" type="text" maxlength="120" placeholder="Opcional" />
+              </label>
+              <small id="salePaymentsHint" class="sale-payments-hint">
+                El pago debe cerrar el total.
+              </small>
+            </section>
+
+          </section>
+
+          <aside class="sale-form-aside">
+            <div class="sale-aside-card sale-kpi-card">
+              <div class="sale-kpi-row">
+                <span>Total articulos</span>
+                <strong id="saleAsideItems">00</strong>
+              </div>
+              <div class="sale-kpi-total">
+                <span>Total a pagar</span>
+                <strong id="saleTotalPreview" class="sale-total-preview">S/ 0.00</strong>
+              </div>
+            </div>
+
+              <div class="sale-aside-card sale-method-card">
+                <p class="sale-side-label">Pagos</p>
+                <div class="sale-method-grid">
+                  <button type="button" class="sale-method-btn is-active" data-sale-quick-pay="Efectivo">Efectivo</button>
+                  <button type="button" class="sale-method-btn" data-sale-quick-pay="Yape">Yape</button>
+                  <button type="button" class="sale-method-btn" data-sale-quick-pay="IZIPAY">IZIPAY</button>
+                  <button type="button" class="sale-method-btn" data-sale-quick-pay="Pedido Ya">Pedido Ya</button>
+                  <button type="button" class="sale-method-btn" data-sale-quick-pay="Rappi">Rappi</button>
+                </div>
+                <p class="sale-method-help">Disponible para efectivo, Yape, IZIPAY, Pedido Ya y Rappi.</p>
+
+              <label class="sale-monto-field">
+                Monto recibido
+                <input id="saleMontoRecibido" type="number" min="0" step="0.10" value="0" />
+              </label>
+
+              <div class="sale-cash-grid">
+                <div class="sale-cash-box">
+                  <span>Pagado</span>
+                  <strong id="salePagadoValue">S/ 0.00</strong>
+                </div>
+                <div class="sale-cash-box is-change">
+                  <span>Vuelto</span>
+                  <strong id="saleVueltoValue">S/ 0.00</strong>
+                </div>
+              </div>
+
+              <div class="sale-aside-datetime-grid">
+                <label class="sale-aside-date-field">
+                  Fecha
+                  <input id="saleFecha" type="date" required />
+                </label>
+                <input id="saleHora" type="hidden" />
+              </div>
+
+              <button id="saleSubmitBtn" class="btn sale-register-btn" type="submit">Continuar a resumen</button>
+              <button id="saleCancelBtn" class="sale-cancel-text" type="button">Cancelar operación</button>
+            </div>
+          </aside>
+        </div>
       </form>
+
+      <footer class="sale-dialog-footer">
+        <span>Cajero: Admin Terminal 01</span>
+        <span>Versión 2.4.0 · Sistema online</span>
+      </footer>
+    </dialog>
+
+    <dialog id="saleReviewDialog" class="sale-review-dialog">
+      <div class="dialog-head">
+        <h3 id="saleConfirmTitle">Confirmar venta</h3>
+        <button id="saleReviewCloseBtn" class="dialog-close" type="button" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="sale-review-dialog-body">
+        <p class="sale-review-copy">Revisa el resumen final antes de guardar.</p>
+        <div id="saleReviewMessage" class="message" aria-live="polite"></div>
+        <div class="sale-review-operation-strip">
+          <label class="sale-review-top-card">
+            <span>Fecha</span>
+            <input id="saleReviewFecha" type="date" required />
+          </label>
+          <input id="saleReviewHora" type="hidden" />
+          <div class="sale-review-top-card">
+            <span>Tipo de pago</span>
+            <strong id="saleConfirmTipoPago">-</strong>
+          </div>
+          <div class="sale-review-top-card">
+            <span>Total</span>
+            <strong id="saleConfirmTotal">-</strong>
+          </div>
+          <div class="sale-review-top-card">
+            <span>Nota</span>
+            <strong id="saleConfirmNota">-</strong>
+          </div>
+        </div>
+        <div class="sale-review-grid">
+          <article class="sale-review-card full-row">
+            <div class="sale-review-card-head">
+              <h5>Productos</h5>
+              <span id="saleConfirmProduct" class="sale-review-chip">-</span>
+            </div>
+            <div class="sale-review-table-wrap">
+              <table class="sale-review-table">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Unitario</th>
+                    <th>Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody id="saleConfirmItemsBody"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+        <div class="sale-review-actions">
+          <button id="saleConfirmBackBtn" class="btn btn-ghost" type="button">Volver a editar</button>
+          <button id="saleConfirmSubmitBtn" class="btn" type="button">Guardar venta</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="cashCloseDialog" class="cash-close-dialog">
+      <div class="dialog-head">
+        <div>
+          <h3>Cierre de caja</h3>
+          <p id="cashCloseTurnLabel" class="cash-close-copy">Resumen del turno activo.</p>
+        </div>
+        <button id="cashCloseCloseBtn" class="dialog-close" type="button" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="cash-close-body">
+        <div class="cash-close-top-grid">
+          <article class="cash-close-stat">
+            <span>Ventas registradas</span>
+            <strong id="cashCloseSalesCount">0</strong>
+          </article>
+          <article class="cash-close-stat">
+            <span>Productos vendidos</span>
+            <strong id="cashCloseProductsCount">0</strong>
+          </article>
+          <article class="cash-close-stat cash-close-stat-total">
+            <span>Total del turno</span>
+            <strong id="cashCloseTotalAmount">S/ 0.00</strong>
+          </article>
+        </div>
+        <section class="cash-close-breakdown">
+          <div class="cash-close-breakdown-head">
+            <h4>Desglose por método de pago</h4>
+            <small>Incluye Efectivo, Yape, Pedido Ya, Rappi e IZIPAY.</small>
+          </div>
+          <div id="cashClosePaymentsBody" class="cash-close-payments"></div>
+        </section>
+      </div>
     </dialog>
 
     <dialog id="productDialog" class="product-dialog">
-      <div class="dialog-head">
-        <h3 id="productDialogTitle">Crear producto</h3>
-        <button id="dialogCloseBtn" class="dialog-close" type="button" aria-label="Cerrar">×</button>
+      <div class="product-dialog-head">
+        <div class="product-dialog-heading">
+          <span class="product-dialog-icon" aria-hidden="true">+</span>
+          <div class="product-dialog-title-wrap">
+            <h3 id="productDialogTitle">Crear producto</h3>
+            <p class="product-dialog-subtitle">Gestión de inventario</p>
+          </div>
+        </div>
+        <button id="dialogCloseBtn" class="dialog-close" type="button" aria-label="Cerrar">&times;</button>
       </div>
 
-      <form id="productForm" class="crud-form dialog-form">
+      <form id="productForm" class="dialog-form product-dialog-form">
         <input id="crudEditId" type="hidden" />
-        <label>
-          N°
-          <input id="crudId" type="number" min="1" step="1" placeholder="Automatico si lo dejas vacio" />
-        </label>
-        <label>
-          NOMBRE
-          <input id="crudNombre" type="text" required maxlength="120" placeholder="Nombre del producto" />
-        </label>
-        <label>
-          PRECIO
-          <input id="crudPrecio" type="number" min="0" step="0.01" required placeholder="0.00" />
-        </label>
-        <label>
-          PEDIDO
-          <input id="crudPedido" type="number" min="0" step="1" value="0" />
-        </label>
-        <label>
-          STOCK ACTUAL
-          <input id="crudStockActual" type="number" min="0" step="0.01" value="0" />
-        </label>
-        <label>
-          AJUSTE STOCK (+/-)
-          <input id="crudStockAjuste" type="number" step="0.01" value="0" />
-        </label>
-        <label>
-          ESTADO
-          <select id="crudEstado">
-            <option value="ACTIVO" selected>ACTIVO</option>
-            <option value="INACTIVO">INACTIVO</option>
-          </select>
-        </label>
-        <label class="full-row">
-          Nota movimiento
-          <input id="crudNota" type="text" maxlength="120" placeholder="Opcional para kardex" />
-        </label>
-        <div class="crud-actions">
+        <div class="product-dialog-shell">
+          <aside class="product-dialog-aside">
+            <section class="product-panel product-panel-dark">
+              <div class="product-panel-head">
+                <span class="product-panel-icon" aria-hidden="true">🖼</span>
+                <div>
+                  <h4>Imágenes</h4>
+                  <p>Sube la principal y hasta 3 extras.</p>
+                </div>
+              </div>
+              <button id="productPreviewCard" class="product-preview-card" type="button" aria-label="Subir imágenes del producto">
+                <div class="product-preview-upload">
+                  <span class="product-preview-upload-icon" aria-hidden="true">📷+</span>
+                  <p class="product-preview-upload-title">Toca para subir o arrastra aquí</p>
+                  <p class="product-preview-upload-meta">PNG, JPG o WEBP · máx. 5MB</p>
+                </div>
+              </button>
+              <input id="crudImagenes" type="file" accept="image/*" multiple hidden />
+              <input id="crudImagenFiltrada" type="file" accept="image/*" hidden />
+              <button id="productOriginalImagesBtn" class="product-originals-btn" type="button" hidden>Fotos originales</button>
+              <div id="crudImagenesPreview" class="product-images-preview"></div>
+            </section>
+
+            <section class="product-panel product-panel-soft">
+              <div class="product-panel-head">
+                <span class="product-panel-icon" aria-hidden="true">⚙</span>
+                <div>
+                  <h4>Estado y kardex</h4>
+                  <p>Solo lo necesario para control interno.</p>
+                </div>
+              </div>
+              <label class="product-field">
+                Estado
+                <select id="crudEstado">
+                  <option value="ACTIVO" selected>ACTIVO</option>
+                  <option value="INACTIVO">INACTIVO</option>
+                </select>
+              </label>
+              <label class="product-field">
+                Nota de movimiento
+                <input id="crudNota" type="text" maxlength="120" placeholder="Opcional para kardex" />
+              </label>
+            </section>
+          </aside>
+
+          <section class="product-dialog-main">
+            <section class="product-panel product-panel-primary">
+              <div class="product-panel-head">
+                <span class="product-panel-icon" aria-hidden="true">🏷</span>
+                <div>
+                  <h4>Ficha del producto</h4>
+                  <p>Identidad clara y datos clave en una sola vista.</p>
+                </div>
+              </div>
+              <div class="product-main-grid">
+                <label class="product-field">
+                  N°
+                  <input id="crudId" type="number" min="1" step="1" placeholder="Automático si lo dejas vacío" />
+                </label>
+                <label class="product-field product-field-name">
+                  Nombre del producto
+                  <input id="crudNombre" type="text" required maxlength="120" placeholder="Ej: Vino Queirolo borgoña" />
+                </label>
+                <label class="product-field product-field-category">
+                  Categoría
+                  <select id="crudCategoria"></select>
+                </label>
+                <label class="product-field product-field-full">
+                  Descripción
+                  <textarea id="crudDescripcion" rows="3" maxlength="240" placeholder="Describe presentación, sabor, formato o detalles útiles para reconocer el producto."></textarea>
+                </label>
+              </div>
+            </section>
+
+            <section class="product-panel product-panel-price">
+              <div class="product-panel-head">
+                <span class="product-panel-icon" aria-hidden="true">💲</span>
+                <div>
+                  <h4>Precios y referencia</h4>
+                  <p>Deja listo el precio de venta, compra y stock objetivo.</p>
+                </div>
+              </div>
+              <div class="product-main-grid product-main-grid-triple">
+                <label class="product-field">
+                  Precio de venta
+                  <input id="crudPrecio" type="number" min="0" step="0.01" required placeholder="0.00" />
+                </label>
+                <label class="product-field">
+                  Precio de compra
+                  <input id="crudPrecioCompra" type="number" min="0" step="0.01" value="0" placeholder="0.00" />
+                </label>
+                <label class="product-field">
+                  Stock máximo
+                  <input id="crudPedido" type="number" min="0" step="1" value="0" />
+                </label>
+              </div>
+            </section>
+
+            <section class="product-panel product-panel-stock">
+              <div class="product-panel-head">
+                <span class="product-panel-icon" aria-hidden="true">📦</span>
+                <div>
+                  <h4>Control de stock</h4>
+                  <p>Define mínimos, existencia actual y ajustes rápidos.</p>
+                </div>
+              </div>
+              <div class="product-stock-grid">
+                <label class="product-field">
+                  Stock mínimo
+                  <input id="crudStockMinimo" type="number" min="0" step="1" inputmode="numeric" value="0" />
+                </label>
+                <label class="product-field">
+                  Stock actual
+                  <input id="crudStockActual" type="number" min="0" step="1" inputmode="numeric" value="0" />
+                </label>
+                <label class="product-field">
+                  Ajuste (+/-)
+                  <input id="crudStockAjuste" type="number" step="1" inputmode="numeric" value="0" />
+                </label>
+              </div>
+            </section>
+
+            <section id="productHistoryActions" class="product-panel product-panel-history product-history-actions" hidden>
+              <div class="product-panel-head">
+                <span class="product-panel-icon" aria-hidden="true">🕘</span>
+                <div>
+                  <h4>Historial</h4>
+                  <p>Abre movimientos y precios de compra sin salir de la edición.</p>
+                </div>
+              </div>
+              <div class="product-history-buttons">
+                <button id="crudMovementHistoryBtn" class="btn btn-alt" type="button">Ver movimientos</button>
+                <button id="crudPurchasePriceHistoryBtn" class="btn btn-ghost" type="button">Ver precios de compra</button>
+              </div>
+            </section>
+          </section>
+        </div>
+
+        <div class="product-dialog-footer">
+          <button id="crudCancelBtn" class="btn btn-alt" type="button">Descartar</button>
+          <button id="crudHardDeleteBtn" class="btn btn-danger" type="button" hidden>Eliminar producto</button>
           <button id="crudSaveBtn" class="btn" type="submit">Guardar producto</button>
-          <button id="crudCancelBtn" class="btn btn-alt" type="button">Cancelar</button>
         </div>
       </form>
+    </dialog>
+
+    <dialog id="productOriginalImagesDialog" class="product-original-images-dialog">
+      <div class="dialog-head">
+        <h3>Fotos originales</h3>
+        <button id="productOriginalImagesCloseBtn" class="dialog-close" type="button" aria-label="Cerrar">&times;</button>
+      </div>
+      <div id="productOriginalImagesPreview" class="product-original-images-preview"></div>
+    </dialog>
+
+    <dialog id="productHistoryDialog" class="product-history-dialog">
+      <div class="dialog-head">
+        <h3 id="productHistoryDialogTitle">Historial de producto</h3>
+        <button id="productHistoryCloseBtn" class="dialog-close" type="button" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="product-history-body">
+        <section class="sales-filters-card product-history-filters-card">
+          <div class="sales-card-head">
+            <div>
+              <p class="sales-card-kicker">Filtro operativo</p>
+              <h3>Consulta por turno operativo</h3>
+            </div>
+          </div>
+          <div class="sales-tools">
+            <div class="sales-date-range">
+              <label>
+                Turno desde
+                <input id="productHistoryDateFrom" type="date" />
+                <small id="productHistoryDateFromHint" class="sales-date-hint">Turno -</small>
+              </label>
+              <label>
+                Turno hasta
+                <input id="productHistoryDateTo" type="date" />
+                <small id="productHistoryDateToHint" class="sales-date-hint">Turno -</small>
+              </label>
+              <button id="productHistoryTodayBtn" class="btn btn-ghost sales-date-today" type="button">HOY</button>
+            </div>
+          </div>
+        </section>
+        <div class="table-wrap product-history-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha/Hora</th>
+                <th>Tipo</th>
+                <th>Detalle</th>
+                <th>Monto/Cantidad</th>
+              </tr>
+            </thead>
+            <tbody id="productHistoryTableBody"></tbody>
+          </table>
+        </div>
+        <p id="productHistoryEmpty" class="product-history-empty" hidden>No hay historial para este producto.</p>
+      </div>
+    </dialog>
+
+    <dialog id="stockOrderDialog" class="stock-order-dialog">
+      <div class="dialog-head">
+        <div>
+          <h3>Reporte de pedido</h3>
+          <p id="stockOrderTurn" class="stock-order-copy">Revisa solo productos activos con alerta, ajusta cantidades y exporta el pedido final.</p>
+        </div>
+        <button id="stockOrderCloseBtn" class="dialog-close" type="button" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="stock-order-body">
+        <div class="stock-order-grid">
+          <section class="inventory-receipt-panel stock-order-review-panel">
+            <div class="inventory-receipt-toolbar">
+              <div>
+                <strong>Productos para pedir</strong>
+                <small id="stockOrderSummary" class="stock-order-summary">0 productos seleccionados.</small>
+              </div>
+              <button id="stockOrderSelectAllBtn" class="btn btn-ghost" type="button">Seleccionar todo</button>
+            </div>
+            <div class="table-wrap stock-order-table-wrap">
+              <table class="stock-order-table stock-order-preview-table">
+                <thead>
+                  <tr>
+                    <th>OK</th>
+                    <th>Producto</th>
+                    <th>Estado</th>
+                    <th>Stock</th>
+                    <th>Mín.</th>
+                    <th>Máx.</th>
+                    <th>Sugerido</th>
+                    <th>Pedido</th>
+                  </tr>
+                </thead>
+                <tbody id="stockOrderItemsBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <aside class="inventory-receipt-panel stock-order-side-panel">
+            <div class="stock-order-side-head">
+              <strong>Resumen del pedido</strong>
+              <small>Vista rápida antes de exportar.</small>
+            </div>
+            <label class="stock-order-date-field">
+              <span>Fecha de entrega / turno</span>
+              <input id="stockOrderDeliveryDate" type="date" />
+            </label>
+            <div class="stock-order-metrics">
+              <article class="stock-order-metric-card">
+                <span>Seleccionados</span>
+                <strong id="stockOrderSelectedCount">0</strong>
+              </article>
+              <article class="stock-order-metric-card">
+                <span>Unidades</span>
+                <strong id="stockOrderUnitsTotal">0</strong>
+              </article>
+              <article class="stock-order-metric-card">
+                <span>Sin stock</span>
+                <strong id="stockOrderOutCount">0</strong>
+              </article>
+              <article class="stock-order-metric-card">
+                <span>Stock bajo</span>
+                <strong id="stockOrderLowCount">0</strong>
+              </article>
+            </div>
+            <div class="stock-order-note-card">
+              <strong>Listo para documento</strong>
+              <p id="stockOrderDocHint">El texto quedará listo para copiar o exportar con los productos aprobados y sus cantidades.</p>
+            </div>
+          </aside>
+        </div>
+        <div class="stock-order-actions">
+          <button id="stockOrderCancelBtn" class="btn btn-alt" type="button">Cancelar</button>
+          <button id="stockOrderExportBtn" class="btn btn-ghost" type="button">Exportar .txt</button>
+          <button id="stockOrderGenerateBtn" class="btn" type="button">Copiar texto</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="inventoryReceiptDialog" class="stock-order-dialog inventory-receipt-dialog">
+      <div class="dialog-head">
+        <div>
+          <h3>Preview de ingreso por recibo</h3>
+          <p id="inventoryReceiptTurn" class="stock-order-copy">Sube uno o varios recibos, revisa los productos detectados y confirma el ingreso.</p>
+        </div>
+        <button id="inventoryReceiptCloseBtn" class="dialog-close" type="button" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="stock-order-body inventory-receipt-body">
+        <div class="inventory-receipt-grid">
+          <section class="inventory-receipt-panel inventory-receipt-upload-panel">
+            <div class="inventory-receipt-panel-head">
+              <strong>Recibos de compra</strong>
+              <small>Imagen o foto para lectura inicial.</small>
+            </div>
+            <button id="inventoryReceiptUploadCard" class="inventory-receipt-upload-card" type="button">
+              <span class="inventory-receipt-upload-icon" aria-hidden="true">🧾</span>
+              <span class="inventory-receipt-upload-title">Subir recibo o arrastrar aquí</span>
+              <span class="inventory-receipt-upload-meta">PNG, JPG, WEBP o PDF</span>
+            </button>
+            <input id="inventoryReceiptFiles" type="file" accept="image/*,.pdf" multiple hidden />
+            <div id="inventoryReceiptFilesPreview" class="inventory-receipt-files-preview"></div>
+            <div id="inventoryReceiptInsights" class="inventory-receipt-insights inventory-receipt-hidden-panel" aria-hidden="true">
+              <strong>Lectura IA</strong>
+              <p>Sube un recibo para ver aquí, en texto simple, qué logra ver la IA en la foto y qué cree que dice el recibo.</p>
+            </div>
+          </section>
+
+          <section class="inventory-receipt-panel inventory-receipt-review-panel">
+            <div class="inventory-receipt-toolbar">
+              <div>
+                <strong>Productos detectados</strong>
+                <small id="inventoryReceiptSummary" class="stock-order-summary">0 producto(s) listos para confirmar.</small>
+              </div>
+              <button id="inventoryReceiptAddRowBtn" class="btn btn-ghost" type="button">+ Agregar producto</button>
+            </div>
+            <div class="table-wrap stock-order-table-wrap">
+              <table class="stock-order-table inventory-receipt-table">
+                <thead>
+                    <tr>
+                      <th>OK</th>
+                    <th>Producto base</th>
+                    <th>Cantidad</th>
+                    <th>Total compra</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="inventoryReceiptItemsBody"></tbody>
+              </table>
+            </div>
+            <div class="inventory-receipt-total" aria-live="polite">
+              <span>Total aprobado</span>
+              <strong id="inventoryReceiptPurchaseTotal">S/ 0.00</strong>
+            </div>
+          </section>
+        </div>
+        <div class="stock-order-actions">
+          <button id="inventoryReceiptCancelBtn" class="btn btn-alt" type="button">Cancelar</button>
+          <button id="inventoryReceiptApplyBtn" class="btn" type="button">Aplicar ingresos</button>
+        </div>
+      </div>
     </dialog>
 
     <dialog id="ingressDialog" class="ingress-dialog">
       <div class="dialog-head">
         <h3>Ingreso de stock</h3>
-        <button id="ingressDialogCloseBtn" class="dialog-close" type="button" aria-label="Cerrar">×</button>
+        <button id="ingressDialogCloseBtn" class="dialog-close" type="button" aria-label="Cerrar">&times;</button>
       </div>
 
       <form id="ingressForm" class="crud-form dialog-form ingress-form">
@@ -635,7 +1312,7 @@
     <dialog id="confirmDialog" class="confirm-dialog">
       <div class="dialog-head">
         <h3 id="confirmDialogTitle">Confirmar accion</h3>
-        <button id="confirmDialogCloseBtn" class="dialog-close" type="button" aria-label="Cerrar">×</button>
+        <button id="confirmDialogCloseBtn" class="dialog-close" type="button" aria-label="Cerrar">&times;</button>
       </div>
       <div class="confirm-dialog-body">
         <p id="confirmDialogMessage" class="confirm-dialog-message">
@@ -648,10 +1325,33 @@
       </div>
     </dialog>
 
+    <div id="onboardingOverlay" class="onboarding-overlay" hidden aria-hidden="true"></div>
+    <button
+      id="onboardingSpotlight"
+      class="onboarding-spotlight"
+      type="button"
+      hidden
+      aria-label="Continuar tutorial"
+    ></button>
+    <aside id="onboardingCoach" class="onboarding-coach" hidden aria-live="polite">
+      <p id="onboardingProgress" class="onboarding-progress">Paso 1 de 6</p>
+      <h3 id="onboardingTitle">Guia rapida</h3>
+      <p id="onboardingBody" class="onboarding-body">
+        Te mostraremos como registrar tu primera venta con productos multiples y pago mixto.
+      </p>
+      <p class="onboarding-tap-hint">Toca el area resaltada para continuar.</p>
+      <div class="onboarding-actions">
+        <button id="onboardingSkipBtn" class="btn btn-ghost" type="button">Saltar</button>
+        <button id="onboardingPrevBtn" class="btn btn-ghost" type="button">Anterior</button>
+        <button id="onboardingNextBtn" class="btn" type="button">Siguiente</button>
+      </div>
+    </aside>
+
     <script src="./functions/custom-functions.js"></script>
     <script src="./components/product-table.component.js"></script>
     <script src="./components/sales-table.component.js"></script>
     <script src="./components/kardex-table.component.js"></script>
+    <script src="./node_modules/tesseract.js/dist/tesseract.min.js"></script>
     <script src="./functions/products-functions.js"></script>
     <script src="./functions/sales-functions.js"></script>
     <script src="./functions/kardex-functions.js"></script>
@@ -663,3 +1363,7 @@
     <script src="./app.js"></script>
   </body>
 </html>
+
+
+
+
