@@ -9,8 +9,7 @@ function createVentasObjectServer(deps) {
     readSalesAll,
     handleVentasCollection,
     handleVentasById,
-    withMysqlConnection,
-    buildDailySalesExportCsv,
+    buildDailySalesExportCsvWithFallback,
     buildDailySalesExportStyledSpreadsheet,
     buildDailySalesExportXlsx,
     appendLog,
@@ -39,14 +38,12 @@ function createVentasObjectServer(deps) {
         exportFormat === "excelxml";
 
       try {
-        const result = await withMysqlConnection(async (connection) =>
-          buildDailySalesExportCsv(connection, {
-            from: query.get("from"),
-            to: query.get("to"),
-            q: query.get("q"),
-            traceId
-          })
-        );
+        const result = await buildDailySalesExportCsvWithFallback({
+          from: query.get("from"),
+          to: query.get("to"),
+          q: query.get("q"),
+          traceId
+        });
 
         if (wantsXlsx) {
           const xlsxResult = buildDailySalesExportXlsx(result);

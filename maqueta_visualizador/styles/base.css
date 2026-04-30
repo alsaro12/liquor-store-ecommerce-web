@@ -1,0 +1,117 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap");
+
+:root {
+  --bg-main: #f4f7fb;
+  --ink: #102034;
+  --ink-soft: #55677c;
+  --panel: rgba(255, 255, 255, 0.78);
+  --line: rgba(16, 32, 52, 0.1);
+  --brand: #0f766e;
+  --brand-2: #2563eb;
+  --danger: #b42318;
+  --ok: #067647;
+  --shadow-soft: 0 10px 30px rgba(16, 32, 52, 0.08);
+  --shadow-deep: 0 30px 70px rgba(16, 32, 52, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: "Outfit", "Trebuchet MS", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 520px at 15% -10%, rgba(14, 165, 233, 0.2), transparent 55%),
+    radial-gradient(900px 460px at 95% 0%, rgba(249, 115, 22, 0.18), transparent 60%),
+    linear-gradient(170deg, #f7faff 0%, #eef4ff 38%, #f7f3ef 100%);
+  position: relative;
+}
+
+.bg-shape {
+  position: fixed;
+  border-radius: 999px;
+  filter: blur(18px);
+  z-index: 0;
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+.bg-shape-1 {
+  width: 400px;
+  height: 400px;
+  top: -150px;
+  right: -150px;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.7), rgba(253, 186, 116, 0.45));
+}
+
+.bg-shape-2 {
+  width: 350px;
+  height: 350px;
+  bottom: -130px;
+  left: -120px;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.65), rgba(20, 184, 166, 0.35));
+}
+
+.app-shell {
+  width: min(1240px, calc(100% - 2rem));
+  margin: 1.35rem auto 2rem;
+  display: grid;
+  gap: 1rem;
+  position: relative;
+  z-index: 1;
+  animation: fade-up 0.65s ease;
+}
+
+.hero {
+  background: linear-gradient(130deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.65));
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  box-shadow: var(--shadow-deep);
+  backdrop-filter: blur(8px);
+  padding: 1.2rem 1.4rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.9rem;
+  align-items: flex-start;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--brand);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+h1 {
+  margin: 0.33rem 0 0.4rem;
+  font-size: clamp(1.5rem, 1.1rem + 1.35vw, 2.3rem);
+  line-height: 1.06;
+}
+
+.hero-copy {
+  margin: 0;
+  max-width: 70ch;
+  color: var(--ink-soft);
+  font-size: 1.02rem;
+}
+
+.hero-version {
+  margin: 0.42rem 0 0;
+  color: #365068;
+  font-size: 0.85rem;
+  font-weight: 600;
+}

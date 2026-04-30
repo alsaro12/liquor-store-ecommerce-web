@@ -23,3 +23,11 @@ logs/
 # IDE
 .vscode/
 .idea/
+
+# Local app data
+/inventario_inicio_grecia.csv
+/kardex.csv
+/productos.csv
+/productos_precios_historial.csv
+/ventas_diarias.csv
+/maqueta_visualizador/uploads/

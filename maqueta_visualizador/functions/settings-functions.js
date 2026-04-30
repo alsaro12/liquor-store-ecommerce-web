@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   function renderApiSettings(refs, getApiBaseUrl) {
     const apiBase = getApiBaseUrl();
     refs.apiBaseUrlCurrent.textContent = apiBase;
@@ -19,10 +19,14 @@
         text = "DB no configurada";
         meta = status.message || "Revisa variables DB_* en .env.";
       } else if (status.connected) {
-        dotClass = "is-ok";
-        text = "DB conectada";
-        const methodLabel = status.method === "mysql2" ? "MySQL OK" : "Puerto OK";
+        const usingMysql = status.method === "mysql2";
+        dotClass = usingMysql ? "is-ok" : "is-warn";
+        text = usingMysql ? "DB conectada" : "Respaldo local activo";
+        const methodLabel = usingMysql ? "MySQL OK" : "Modo local CSV";
         meta = `${status.host}:${status.port}/${status.database} · ${methodLabel}`;
+        if (status.message) {
+          meta = `${meta} · ${status.message}`;
+        }
       } else {
         dotClass = "is-error";
         text = "DB sin conexión";
@@ -34,7 +38,7 @@
     refs.dbStatusDot.classList.add(dotClass);
     refs.dbStatusText.textContent = text;
     refs.dbStatusMeta.textContent = meta;
-    refs.dbStatusLastCheck.textContent = `Ultima verificacion: ${
+    refs.dbStatusLastCheck.textContent = `Última verificación: ${
       status?.checkedAt ? formatDateTime(status.checkedAt) : "-"
     }`;
   }
@@ -53,10 +57,10 @@
         parts.push(String(info.sourceLabel));
       }
       if (info.checkedAt) {
-        parts.push(`Ultima verificacion: ${formatDateTime(info.checkedAt)}`);
+        parts.push(`Última verificación: ${formatDateTime(info.checkedAt)}`);
       }
       if (info.fallbackHost) {
-        parts.push(`IP publica detectada: ${info.fallbackHost}`);
+        parts.push(`IP pública detectada: ${info.fallbackHost}`);
       }
       if (info.message) {
         parts.push(String(info.message));
@@ -173,7 +177,7 @@
               checkedAt: new Date().toISOString(),
               host: browserFallback.ip,
               source: "browser_public_ipv4",
-              sourceLabel: `IP publica detectada desde navegador (${browserFallback.source})`,
+              sourceLabel: `IP pública detectada desde navegador (${browserFallback.source})`,
               publicHost: browserFallback.ip,
               dbDeniedHost: null,
               localHost: null,
@@ -190,7 +194,7 @@
               source: "error",
               sourceLabel: "No disponible",
               message:
-                "No se pudo detectar automaticamente. Verifica la URL API o detecta la IP publica manualmente.",
+                "No se pudo detectar automáticamente. Verifica la URL API o detecta la IP pública manualmente.",
               error: String(error?.message || "Error de conexión con API.")
             };
           }
@@ -370,7 +374,7 @@
     async function handleCopyAccessHost() {
       const host = String(refs.accessHostValue.value || "").trim();
       if (!host || host === "-") {
-        setSettingsMessage("Primero detecta un Access Host valido.", "is-error", { autoClearMs: 2600 });
+        setSettingsMessage("Primero detecta un Access Host válido.", "is-error", { autoClearMs: 2600 });
         return;
       }
       try {
@@ -434,3 +438,6 @@
     createController
   };
 })();
+
+
+
