@@ -3,6 +3,9 @@
   "version": "1.0.2",
   "main": "app.js",
   "scripts": {
+    "check": "npm run check:mojibake && npm run check:syntax",
+    "check:mojibake": "node scripts/check-mojibake.js",
+    "check:syntax": "find . -path './node_modules' -prune -o -path './vendor' -prune -o -name '*.js' -print0 | xargs -0 -n1 node --check",
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
@@ -11,10 +14,6 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "mysql2": "^3.16.3",
-    "tesseract.js": "^7.0.0"
-  },
-  "devDependencies": {
-    "firebase-tools": "^15.15.0"
+    "mysql2": "^3.16.3"
   }
 }

@@ -1,0 +1,86 @@
+.app-message {
+  margin: 0;
+  padding: 0.62rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+}
+
+.db-status-card {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.62rem 0.75rem;
+  background: linear-gradient(130deg, rgba(255, 255, 255, 0.86), rgba(246, 251, 255, 0.82));
+  box-shadow: var(--shadow-soft);
+}
+
+.db-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+}
+
+.db-status-dot.is-idle {
+  background: #94a3b8;
+}
+
+.db-status-dot.is-ok {
+  background: #16a34a;
+}
+
+.db-status-dot.is-warn {
+  background: #f59e0b;
+}
+
+.db-status-dot.is-error {
+  background: #dc2626;
+}
+
+.db-status-content {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.db-status-label {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+#dbStatusText {
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+
+#dbStatusMeta {
+  color: #516579;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#dbStatusLastCheck {
+  color: #6b7f92;
+  font-size: 0.74rem;
+}
+
+.db-status-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.42rem;
+  align-items: center;
+}

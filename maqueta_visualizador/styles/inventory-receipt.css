@@ -1,0 +1,246 @@
+.inventory-receipt-body {
+  gap: 12px;
+}
+
+.inventory-receipt-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.5fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.inventory-receipt-panel {
+  border: 1px solid rgba(16, 32, 52, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.inventory-receipt-upload-panel {
+  background: linear-gradient(145deg, rgba(246, 250, 255, 0.96), rgba(240, 248, 255, 0.92));
+}
+
+.inventory-receipt-review-panel {
+  background: linear-gradient(145deg, rgba(255, 252, 252, 0.96), rgba(248, 251, 255, 0.94));
+}
+
+.inventory-receipt-panel-head {
+  display: grid;
+  gap: 2px;
+}
+
+.inventory-receipt-panel-head strong {
+  color: #173756;
+  font-size: 0.95rem;
+}
+
+.inventory-receipt-panel-head small {
+  color: #607488;
+  font-size: 0.78rem;
+}
+
+.inventory-receipt-upload-card {
+  border: 1px dashed rgba(16, 32, 52, 0.18);
+  border-radius: 16px;
+  min-height: 118px;
+  display: grid;
+  place-content: center;
+  gap: 6px;
+  text-align: center;
+  background: linear-gradient(155deg, #10202d, #183246);
+  color: #e7f1f8;
+  cursor: pointer;
+  padding: 12px;
+}
+
+.inventory-receipt-upload-icon {
+  font-size: 1.9rem;
+}
+
+.inventory-receipt-upload-title {
+  font-weight: 800;
+}
+
+.inventory-receipt-upload-meta {
+  font-size: 0.78rem;
+  color: #c1d3e4;
+}
+
+.inventory-receipt-files-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.inventory-receipt-file-card {
+  border: 1px solid rgba(16, 32, 52, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.inventory-receipt-file-card img,
+.inventory-receipt-file-glyph {
+  width: 100%;
+  min-height: 168px;
+  max-height: 310px;
+  object-fit: contain;
+  display: grid;
+  place-items: center;
+  background: #eef4fa;
+  color: #51677c;
+  font-weight: 800;
+}
+
+.inventory-receipt-file-copy {
+  padding: 8px;
+}
+
+.inventory-receipt-file-copy strong {
+  display: block;
+  font-size: 0.76rem;
+  color: #173756;
+  word-break: break-word;
+}
+
+.inventory-receipt-file-copy small {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.72rem;
+  color: #607488;
+}
+
+.inventory-receipt-file-preview {
+  margin-top: 6px;
+  line-height: 1.35;
+  color: #314b64;
+  max-height: 4.1em;
+  overflow: hidden;
+}
+
+.inventory-receipt-empty {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.8);
+  color: #607488;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.inventory-receipt-insights {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(16, 32, 52, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.inventory-receipt-reading-col {
+  display: none;
+}
+
+.inventory-receipt-reading-col {
+  display: table-cell;
+}
+
+.inventory-receipt-insights > strong {
+  display: block;
+  color: #173756;
+  font-size: 0.84rem;
+}
+
+.inventory-receipt-insights > p {
+  margin: 8px 0 0;
+  color: #607488;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.inventory-receipt-insight-item + .inventory-receipt-insight-item {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(16, 32, 52, 0.12);
+}
+
+.inventory-receipt-insight-item strong {
+  display: block;
+  color: #173756;
+  font-size: 0.78rem;
+}
+
+.inventory-receipt-insight-item small {
+  display: block;
+  margin-top: 2px;
+  color: #607488;
+  font-size: 0.72rem;
+}
+
+.inventory-receipt-insight-item p {
+  margin: 6px 0 0;
+  color: #314b64;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.inventory-receipt-toolbar {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.inventory-receipt-select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid rgba(16, 32, 52, 0.16);
+  border-radius: 10px;
+  padding: 0 10px;
+  font: inherit;
+  color: #173756;
+  background: #fff;
+}
+
+.inventory-receipt-source {
+  display: inline-block;
+  min-height: 40px;
+  color: #5d7389;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.inventory-receipt-remove-btn {
+  min-height: 40px;
+}
+
+.inventory-receipt-total {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(10, 128, 97, 0.16);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(232, 255, 246, 0.86), rgba(255, 255, 255, 0.92));
+  color: #173756;
+}
+
+.inventory-receipt-total span {
+  color: #5d7389;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.inventory-receipt-total strong {
+  color: #087a5d;
+  font-size: 1.08rem;
+  font-weight: 900;
+}
