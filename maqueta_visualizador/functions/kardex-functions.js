@@ -71,8 +71,12 @@
     }
 
     async function loadKardexAllForKpi() {
-      const items = await apiRequest("/api/kardex/all");
-      state.kardexAll = Array.isArray(items) ? items : [];
+      try {
+        const items = await apiRequest("/api/kardex/all");
+        state.kardexAll = Array.isArray(items) ? items : [];
+      } catch {
+        state.kardexAll = Array.isArray(state.kardex) ? [...state.kardex] : [];
+      }
     }
 
     async function refreshLocalKardexController() {

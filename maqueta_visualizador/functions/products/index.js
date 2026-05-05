@@ -859,10 +859,14 @@
     }
 
     async function loadProductCatalog() {
-      const items = await apiRequest("/api/productos/all");
-      state.productCatalog = Array.isArray(items)
-        ? [...items].sort((a, b) => getProductId(a) - getProductId(b))
-        : [];
+      try {
+        const items = await apiRequest("/api/productos/all");
+        state.productCatalog = Array.isArray(items)
+          ? [...items].sort((a, b) => getProductId(a) - getProductId(b))
+          : [];
+      } catch {
+        state.productCatalog = Array.isArray(state.products) ? [...state.products] : [];
+      }
       renderProductCategoryOptions();
     }
 
@@ -1232,7 +1236,6 @@
     createController
   };
 })();
-
 
 
 

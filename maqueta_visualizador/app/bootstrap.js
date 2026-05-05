@@ -21,7 +21,7 @@ const ONBOARDING_SEEN_STORAGE_KEY = "licoreria.onboarding_seen";
 const NAV_OVERLAY_BREAKPOINT = 1080;
 const FALLBACK_API_BASE_URL = "https://licoreria.escon.pe/";
 const PAYMENT_TYPES = ["Efectivo", "Yape", "Pedido Ya", "Rappi", "IZIPAY"];
-const APP_VERSION = "1.0.4";
+const APP_VERSION = "1.0.5";
 const {
   esc,
   money,

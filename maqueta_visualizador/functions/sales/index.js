@@ -928,8 +928,12 @@
     }
 
     async function loadSalesAllForKpi() {
-      const items = await apiRequest("/api/ventas/all");
-      state.salesAll = Array.isArray(items) ? items : [];
+      try {
+        const items = await apiRequest("/api/ventas/all");
+        state.salesAll = Array.isArray(items) ? items : [];
+      } catch {
+        state.salesAll = Array.isArray(state.sales) ? [...state.sales] : [];
+      }
     }
 
     async function refreshLocalSales() {
@@ -1568,5 +1572,4 @@
     createController
   };
 })();
-
 
