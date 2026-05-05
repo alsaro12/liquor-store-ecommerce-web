@@ -21,7 +21,7 @@ const ONBOARDING_SEEN_STORAGE_KEY = "licoreria.onboarding_seen";
 const NAV_OVERLAY_BREAKPOINT = 1080;
 const FALLBACK_API_BASE_URL = "https://licoreria.escon.pe/";
 const PAYMENT_TYPES = ["Efectivo", "Yape", "Pedido Ya", "Rappi", "IZIPAY"];
-const APP_VERSION = "1.0.3";
+const APP_VERSION = "1.0.4";
 const {
   esc,
   money,
@@ -1056,6 +1056,7 @@ async function apiRequest(path, options = {}) {
   try {
     response = await fetch(requestUrl, {
       headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      cache: requestOptions.cache || "no-store",
       ...requestOptions,
       signal: requestOptions.signal || controller.signal
     });
