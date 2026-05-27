@@ -1,0 +1,31 @@
+{
+  "name": "maqueta_visualizador",
+  "version": "1.0.2",
+  "main": "server.js",
+  "scripts": {
+    "dev:react": "vite --host localhost --port 5173",
+    "build": "vite build",
+    "build:react": "vite build",
+    "preview": "vite preview --host localhost --port 4173",
+    "preview:react": "vite preview --host localhost --port 4173",
+    "check": "npm run check:mojibake && npm run check:syntax",
+    "check:mojibake": "node scripts/check-mojibake.js",
+    "check:syntax": "find . -path './node_modules' -prune -o -path './vendor' -prune -o -name '*.js' -print0 | xargs -0 -n1 node --check",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "firebase": "^12.13.0",
+    "leaflet": "^1.9.4",
+    "mysql2": "^3.22.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.3",
+    "vite": "^5.4.21"
+  }
+}
