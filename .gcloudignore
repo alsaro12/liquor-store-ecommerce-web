@@ -1,0 +1,13 @@
+.git
+.agents
+.codex
+.npm-cache
+node_modules
+logs
+dist-webpack
+local-db/*.json
+uploads
+.env
+.env.*
+*.csv
+npm-debug.log*

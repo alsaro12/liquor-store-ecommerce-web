@@ -1,0 +1,24 @@
+﻿node_modules/
+.env
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+uploads/
+docs/
+dist/
+dist-webpack/
+.firebase/
+.npm-cache/
+
+# data runtime (mantener .js, ignorar datos)
+local-db/*.json
+local-db/*.csv
+local-db/*.bak
+
+# macOS / IDE
+.DS_Store
+.vscode/
+.idea/

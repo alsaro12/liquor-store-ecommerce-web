@@ -1,0 +1,38 @@
+<svg width="820" height="180" viewBox="0 0 820 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="logoGlow" x="0" y="0" width="820" height="180" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="4"/>
+      <feGaussianBlur stdDeviation="9"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 0.431373 0 0 0 0 0.223529 0 0 0 0.3 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_1" result="shape"/>
+    </filter>
+    <linearGradient id="logoFill" x1="115" y1="48" x2="653" y2="138" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF5B2B"/>
+      <stop offset="1" stop-color="#FF7B39"/>
+    </linearGradient>
+  </defs>
+
+  <g filter="url(#logoGlow)">
+    <text
+      x="18"
+      y="132"
+      fill="url(#logoFill)"
+      stroke="#F24B23"
+      stroke-width="2.5"
+      paint-order="stroke fill"
+      style="font-family:'Bowlby One SC','Arial Black',sans-serif;font-size:92px;font-weight:700;letter-spacing:-0.04em;"
+    >
+      LA LICORERÍA
+    </text>
+  </g>
+
+  <g transform="translate(735 64)" stroke="#FF5B2B" stroke-width="12" stroke-linecap="round">
+    <line x1="0" y1="-28" x2="0" y2="28"/>
+    <line x1="-24.2487" y1="-14" x2="24.2487" y2="14"/>
+    <line x1="-24.2487" y1="14" x2="24.2487" y2="-14"/>
+  </g>
+</svg>
