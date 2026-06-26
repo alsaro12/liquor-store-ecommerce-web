@@ -12983,6 +12983,19 @@ button.checkout-combo-toggle[aria-expanded="true"] > b::before {
   margin-bottom: 6px;
 }
 
+.checkout-mode.is-delivery-only {
+  grid-template-columns: 1fr;
+  background: #1f150a;
+  border: 1px solid rgba(255, 216, 111, 0.45);
+  color: #ffd86f;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
 .checkout-mode button {
   border: 0;
   background: transparent;

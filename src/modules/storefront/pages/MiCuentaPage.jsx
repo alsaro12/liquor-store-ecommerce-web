@@ -46,7 +46,7 @@ function buildLatestOrderSummary(order) {
     publicCode: order.publicCode || order.customerCode || "",
     createdAt: order.createdAt,
     status: order.status,
-    modeLabel: order.modeLabel || (order.mode === "delivery" ? "Delivery" : "Recojo"),
+    modeLabel: "Delivery",
     total: order.total,
     items: items.slice(0, 3).map((item) => ({
       productId: item.productId,

@@ -2881,8 +2881,7 @@ function findCustomerRecord(customers, userId) {
 }
 
 function normalizeOrderMode(value) {
-  const normalized = normalizeText(value || "pickup");
-  return normalized === "delivery" ? "delivery" : "pickup";
+  return "delivery";
 }
 
 function normalizeOrderStatus(value, options = {}) {
@@ -3000,8 +2999,8 @@ function buildOrderApiShape(base) {
     usuarioId: usuarioId > 0 ? usuarioId : null,
     createdAt: trimValue(base?.createdAt || nowIso()),
     mode: normalizeOrderMode(base?.mode),
-    modeLabel: trimValue(base?.modeLabel || (normalizeOrderMode(base?.mode) === "delivery" ? "Delivery" : "Recojo")),
-    pickupDate: trimValue(base?.pickupDate || ""),
+    modeLabel: "Delivery",
+    pickupDate: "",
     status: normalizeOrderStatus(base?.status),
     customer: {
       name: trimValue(customer?.name || ""),
@@ -3141,7 +3140,6 @@ async function createOrder(payload, options = {}) {
   const name = trimValue(customer?.name || "");
   const phone = trimValue(customer?.phone || "");
   const address = trimValue(customer?.address || "");
-  const pickupDate = trimValue(payload?.pickupDate || "");
   const customerLat = Number(customer?.latitud);
   const customerLng = Number(customer?.longitud);
   if (!name) throw createHttpError(400, "El nombre del cliente es obligatorio.");
@@ -3153,10 +3151,6 @@ async function createOrder(payload, options = {}) {
   if (mode === "delivery" && (!Number.isFinite(customerLat) || !Number.isFinite(customerLng))) {
     throw createHttpError(400, "La ubicación en mapa es obligatoria para delivery.");
   }
-  if (mode === "pickup" && !pickupDate) {
-    throw createHttpError(400, "La fecha de recojo es obligatoria.");
-  }
-
   const subtotal = calculateOrderSubtotal(items);
   let shipping = 0;
   let deliveryDistanceKm = null;
@@ -3185,8 +3179,8 @@ async function createOrder(payload, options = {}) {
     usuarioId: toInt(options?.usuarioId ?? payload?.usuarioId ?? payload?.usuario_id, 0) || null,
     createdAt: trimValue(payload?.createdAt || new Date().toLocaleString("es-PE")),
     mode,
-    modeLabel: mode === "delivery" ? "Delivery" : "Recojo",
-    pickupDate,
+    modeLabel: "Delivery",
+    pickupDate: "",
     status: "PENDIENTE",
     customer: {
       name,
@@ -5243,6 +5237,9 @@ async function registerCustomer(payload) {
   const dni = normalizeDni(payload?.dni);
   const refCode = trimValue(payload?.refCode || payload?.codigo_referido || "").toUpperCase().slice(0, 40);
   const usePhoneFlow = !!telefono || !!dni || !emailInput;
+  const fechaNacimiento = trimValue(payload?.fechaNacimiento || "");
+  const edadDeclarada = calculateAgeFromBirthDate(fechaNacimiento);
+  const mayoriaEdadConfirmada = payload?.confirmaMayoriaEdad === true || payload?.mayoriaEdadConfirmada === true;
 
   if (!nombre) {
     throw createHttpError(400, "Falta el nombre.");

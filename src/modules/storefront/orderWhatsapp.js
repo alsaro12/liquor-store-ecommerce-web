@@ -48,7 +48,7 @@ export function buildWhatsappOrderMessage(order) {
   const totals = order?.totals || {};
   const code = publicOrderCode(order);
   const detailUrl = order?.detailUrl || getOrderDetailUrl(code || order?.id || "");
-  const isDelivery = delivery.mode === "delivery";
+  const isDelivery = true;
   const deliveryTotal = Number(totals.shipping || 0);
 
   lines.push("Hola, quiero realizar el siguiente pedido:");
@@ -73,7 +73,7 @@ export function buildWhatsappOrderMessage(order) {
   });
   lines.push("");
   lines.push(`🧾 Subtotal: ${formatOrderMoney(totals.subtotal)}`);
-  lines.push(isDelivery ? `🚚 Delivery: ${formatOrderMoney(deliveryTotal)}` : "🏬 Recojo en tienda");
+  lines.push(`🚚 Delivery: ${formatOrderMoney(deliveryTotal)}`);
   lines.push("");
   lines.push("━━━━━━━━━━━━━━");
   lines.push("📍 *DATOS DE ENTREGA*");
@@ -88,8 +88,6 @@ export function buildWhatsappOrderMessage(order) {
       delivery.coords ? `Coordenadas: ${delivery.coords}` : ""
     ].filter(Boolean).join(" · ");
     if (deliveryLine) lines.push(`📌 ${deliveryLine}`);
-  } else if (delivery.pickupDate) {
-    lines.push(`🏬 Recojo en tienda · ${delivery.pickupDate}`);
   }
   lines.push("");
   lines.push("━━━━━━━━━━━━━━");

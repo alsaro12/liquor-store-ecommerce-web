@@ -31,13 +31,12 @@ function saveLastCheckoutForm(data) {
 }
 
 export default function CheckoutModal({ open, onClose, items, authUser, onSuccess }) {
-  const [mode, setMode] = useState("delivery");
+  const mode = "delivery";
   const [form, setForm] = useState({
     name: "",
     phone: "",
     address: "",
-    reference: "",
-    pickupDate: ""
+    reference: ""
   });
   const [location, setLocation] = useState(null); // { direccion, distrito, ciudad, latitud, longitud, geohash }
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -63,14 +62,12 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
 
     const saved = readLastCheckoutForm();
     if (!saved) return;
-    setMode(saved.mode === "pickup" ? "pickup" : "delivery");
     setForm((prev) => ({
       ...prev,
       name: saved.form?.name || prev.name,
       phone: saved.form?.phone || prev.phone,
       address: saved.form?.address || prev.address,
-      reference: saved.form?.reference || prev.reference,
-      pickupDate: saved.form?.pickupDate || prev.pickupDate
+      reference: saved.form?.reference || prev.reference
     }));
     setNotes(saved.notes || "");
     setSaveAddress(saved.saveAddress !== false);
@@ -111,12 +108,12 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
           && config?.store?.longitud !== undefined
           && Number.isFinite(Number(config.store.latitud))
           && Number.isFinite(Number(config.store.longitud));
-        if (!hasStore) setMode("pickup");
+        if (!hasStore) setDeliveryQuote({ available: false, message: "Delivery no disponible por ahora." });
       })
       .catch(() => {
         if (!cancelled) {
           setDeliveryConfig(null);
-          setMode("pickup");
+          setDeliveryQuote({ available: false, message: "Delivery no disponible por ahora." });
         }
       })
       .finally(() => {
@@ -197,13 +194,12 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
 
     if (!form.name.trim()) return setError("Falta tu nombre.");
     if (!form.phone.trim() || form.phone.trim().length < 6) return setError("Ingresa un celular válido.");
-    if (mode === "delivery" && !deliveryAvailable) return setError("Delivery no disponible por ahora. Elige recojo en tienda.");
+    if (!deliveryAvailable) return setError("Delivery no disponible por ahora.");
     if (mode === "delivery" && !location) return setError("Elige tu ubicación en el mapa.");
     if (mode === "delivery" && !location.confirmedByMapMove) return setError("Mueve el mapa para confirmar tu ubicación exacta.");
     if (mode === "delivery" && !form.address.trim()) return setError("Ingresa tu dirección exacta.");
     if (mode === "delivery" && deliveryQuoteLoading) return setError("Estamos calculando el delivery. Intenta nuevamente en unos segundos.");
     if (mode === "delivery" && !deliveryQuote?.available) return setError(deliveryQuote?.message || "Tu dirección está fuera de cobertura.");
-    if (mode === "pickup" && !form.pickupDate) return setError("Elige cuándo vas a recoger el pedido.");
     if (!items.length) return setError("Tu carrito está vacío.");
 
     setSubmitting(true);
@@ -223,7 +219,7 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
           distrito: mode === "delivery" ? location?.distrito || "" : "",
           ciudad: mode === "delivery" ? location?.ciudad || "" : ""
         },
-        pickupDate: mode === "pickup" ? form.pickupDate : "",
+        pickupDate: "",
         items: items.map((it) => ({
           productId: Number(it.productId || it.parentProductId || it.id) || 0,
           id: it.id,
@@ -277,7 +273,7 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
           coords: mode === "delivery" && location?.latitud && location?.longitud
             ? `${Number(location.latitud).toFixed(6)}, ${Number(location.longitud).toFixed(6)}`
             : "",
-          pickupDate: mode === "pickup" ? form.pickupDate : ""
+          pickupDate: ""
         },
         items: payload.items,
         totals: { subtotal, shipping, serviceFee, serviceFeeRate: 0, total },
@@ -293,7 +289,7 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
           phone: form.phone.trim(),
           address: mode === "delivery" ? form.address.trim() : "",
           reference: form.reference.trim(),
-          pickupDate: mode === "pickup" ? form.pickupDate : ""
+          pickupDate: ""
         },
         location: mode === "delivery" && location ? {
           direccion: location.direccion || "",
@@ -398,22 +394,8 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
 
             <div className="checkout-modal-grid">
               <form className="checkout-form" onSubmit={submit}>
-                <div className="checkout-mode" role="tablist">
-                  <button
-                    type="button"
-                    className={mode === "delivery" ? "is-active" : ""}
-                    onClick={() => deliveryAvailable && setMode("delivery")}
-                    disabled={!deliveryAvailable || deliveryConfigLoading}
-                  >
-                    🚚 Delivery
-                  </button>
-                  <button
-                    type="button"
-                    className={mode === "pickup" ? "is-active" : ""}
-                    onClick={() => setMode("pickup")}
-                  >
-                    🏪 Recojo en tienda
-                  </button>
+                <div className="checkout-mode is-delivery-only" role="status" aria-live="polite">
+                  <span>🚚 Delivery</span>
                 </div>
 
                 <label>
@@ -438,84 +420,70 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
                   />
                 </label>
 
-                {mode === "delivery" ? (
-                  <>
-                    <div className="checkout-address-field">
-                      <span className="checkout-address-label">Ubicación</span>
-                      {location ? (
-                        <div className="checkout-address-card">
-                          <div>
-                            <p className="checkout-address-text">{location.direccion}</p>
-                            <p className="checkout-address-meta">
-                              {[location.distrito, location.ciudad].filter(Boolean).join(" · ")}
-                            </p>
-                            <p className="checkout-address-coords">
-                              {Number(location.latitud).toFixed(6)}, {Number(location.longitud).toFixed(6)}
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            className="checkout-address-change"
-                            onClick={() => setPickerOpen(true)}
-                          >
-                            Cambiar
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          className="checkout-address-trigger"
-                          onClick={() => setPickerOpen(true)}
-                        >
-                          <span aria-hidden="true">📍</span> Elegir ubicación en el mapa
-                        </button>
-                      )}
+                <div className="checkout-address-field">
+                  <span className="checkout-address-label">Ubicación</span>
+                  {location ? (
+                    <div className="checkout-address-card">
+                      <div>
+                        <p className="checkout-address-text">{location.direccion}</p>
+                        <p className="checkout-address-meta">
+                          {[location.distrito, location.ciudad].filter(Boolean).join(" · ")}
+                        </p>
+                        <p className="checkout-address-coords">
+                          {Number(location.latitud).toFixed(6)}, {Number(location.longitud).toFixed(6)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="checkout-address-change"
+                        onClick={() => setPickerOpen(true)}
+                      >
+                        Cambiar
+                      </button>
                     </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="checkout-address-trigger"
+                      onClick={() => setPickerOpen(true)}
+                    >
+                      <span aria-hidden="true">📍</span> Elegir ubicación en el mapa
+                    </button>
+                  )}
+                </div>
 
-                    <label>
-                      <span>Dirección exacta</span>
-                      <input
-                        type="text"
-                        value={form.address}
-                        onChange={(event) => update("address", event.target.value)}
-                        placeholder="Mz B Lt 4, piso 2, puerta negra"
-                        required
-                        autoComplete="street-address"
-                      />
-                    </label>
+                <label>
+                  <span>Dirección exacta</span>
+                  <input
+                    type="text"
+                    value={form.address}
+                    onChange={(event) => update("address", event.target.value)}
+                    placeholder="Mz B Lt 4, piso 2, puerta negra"
+                    required
+                    autoComplete="street-address"
+                  />
+                </label>
 
-                    <label>
-                      <span>Referencia (opcional)</span>
-                      <input
-                        type="text"
-                        value={form.reference}
-                        onChange={(event) => update("reference", event.target.value)}
-                        placeholder="Frente al parque"
-                      />
-                    </label>
+                <label>
+                  <span>Referencia (opcional)</span>
+                  <input
+                    type="text"
+                    value={form.reference}
+                    onChange={(event) => update("reference", event.target.value)}
+                    placeholder="Frente al parque"
+                  />
+                </label>
 
-                    {authUser ? (
-                      <label className="checkout-save-address">
-                        <input
-                          type="checkbox"
-                          checked={saveAddress}
-                          onChange={(event) => setSaveAddress(event.target.checked)}
-                        />
-                        <span>Guardar esta dirección en mi cuenta</span>
-                      </label>
-                    ) : null}
-                  </>
-                ) : (
-                  <label>
-                    <span>Fecha y hora de recojo</span>
+                {authUser ? (
+                  <label className="checkout-save-address">
                     <input
-                      type="datetime-local"
-                      value={form.pickupDate}
-                      onChange={(event) => update("pickupDate", event.target.value)}
-                      required
+                      type="checkbox"
+                      checked={saveAddress}
+                      onChange={(event) => setSaveAddress(event.target.checked)}
                     />
+                    <span>Guardar esta dirección en mi cuenta</span>
                   </label>
-                )}
+                ) : null}
 
                 <label>
                   <span>Notas (opcional)</span>
@@ -586,7 +554,7 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
                 </ul>
                 <dl>
                   <div><dt>Subtotal</dt><dd>{formatMoney(subtotal)}</dd></div>
-                  <div><dt>Envío</dt><dd>{mode === "pickup" ? "Recojo" : deliveryQuoteLoading || !deliveryQuote ? "Calculando..." : !deliveryQuote.available ? "Sin cobertura" : formatMoney(visibleDelivery)}</dd></div>
+                  <div><dt>Delivery</dt><dd>{deliveryQuoteLoading || !deliveryQuote ? "Calculando..." : !deliveryQuote.available ? "Sin cobertura" : formatMoney(visibleDelivery)}</dd></div>
                   <div className="checkout-summary-total"><dt>Total</dt><dd>{formatMoney(total)}</dd></div>
                 </dl>
               </aside>

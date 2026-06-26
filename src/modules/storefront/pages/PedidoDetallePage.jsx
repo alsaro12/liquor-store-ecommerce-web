@@ -33,7 +33,7 @@ function mapUrl(order) {
 
 function normalizeOrderDetail(order) {
   if (!order) return null;
-  const mode = order.delivery?.mode || order.mode || "delivery";
+  const mode = "delivery";
   const subtotal = order.totals?.subtotal ?? order.subtotal ?? order.total;
   const shipping = order.totals?.shipping ?? order.shipping ?? 0;
   const serviceFee = order.totals?.serviceFee ?? order.serviceFee ?? 0;
@@ -55,7 +55,7 @@ function normalizeOrderDetail(order) {
       distrito: order.delivery?.distrito || order.customer?.distrito || "",
       ciudad: order.delivery?.ciudad || order.customer?.ciudad || "",
       coords: order.delivery?.coords || formatCoords(order.delivery?.latitud ?? order.customer?.latitud, order.delivery?.longitud ?? order.customer?.longitud),
-      pickupDate: order.delivery?.pickupDate || order.pickupDate || ""
+      pickupDate: ""
     },
     totals: {
       subtotal,
@@ -125,7 +125,7 @@ export function OrderDetailContent({ order, productsMap, combos }) {
   const normalizedOrder = normalizeOrderDetail(order);
   const [expandedCombos, setExpandedCombos] = useState(() => new Set());
   if (!normalizedOrder) return null;
-  const isDelivery = normalizedOrder.delivery?.mode === "delivery";
+  const isDelivery = true;
   const orderCode = displayOrderCode(normalizedOrder);
   const locationMapUrl = isDelivery ? mapUrl(normalizedOrder) : "";
   const visibleDelivery = Number(normalizedOrder.totals?.shipping || 0);
@@ -155,18 +155,12 @@ export function OrderDetailContent({ order, productsMap, combos }) {
           <dl>
             <div><dt>Cliente</dt><dd>{normalizedOrder.customer?.name || "-"}</dd></div>
             <div><dt>Celular</dt><dd>{normalizedOrder.customer?.phone || "-"}</dd></div>
-            <div><dt>Modalidad</dt><dd>{isDelivery ? "Delivery" : "Recojo en tienda"}</dd></div>
-            {isDelivery ? (
-              <>
-                <div><dt>Ubicación</dt><dd>{normalizedOrder.delivery?.location || "-"}</dd></div>
-                <div><dt>Dirección exacta</dt><dd>{normalizedOrder.delivery?.address || "-"}</dd></div>
-                <div><dt>Referencia</dt><dd>{normalizedOrder.delivery?.reference || "-"}</dd></div>
-                <div><dt>Coordenadas</dt><dd>{normalizedOrder.delivery?.coords || "-"}</dd></div>
-                <div><dt>Distrito</dt><dd>{[normalizedOrder.delivery?.distrito, normalizedOrder.delivery?.ciudad].filter(Boolean).join(" · ") || "-"}</dd></div>
-              </>
-            ) : (
-              <div><dt>Recojo</dt><dd>{normalizedOrder.delivery?.pickupDate || "-"}</dd></div>
-            )}
+            <div><dt>Modalidad</dt><dd>Delivery</dd></div>
+            <div><dt>Ubicación</dt><dd>{normalizedOrder.delivery?.location || "-"}</dd></div>
+            <div><dt>Dirección exacta</dt><dd>{normalizedOrder.delivery?.address || "-"}</dd></div>
+            <div><dt>Referencia</dt><dd>{normalizedOrder.delivery?.reference || "-"}</dd></div>
+            <div><dt>Coordenadas</dt><dd>{normalizedOrder.delivery?.coords || "-"}</dd></div>
+            <div><dt>Distrito</dt><dd>{[normalizedOrder.delivery?.distrito, normalizedOrder.delivery?.ciudad].filter(Boolean).join(" · ") || "-"}</dd></div>
             <div><dt>Notas</dt><dd>{normalizedOrder.notes || "-"}</dd></div>
           </dl>
         </article>
@@ -176,7 +170,7 @@ export function OrderDetailContent({ order, productsMap, combos }) {
           <p className="order-detail-payment">Yapear al <strong>940189609</strong> para confirmar el pedido.</p>
           <dl>
             <div><dt>Subtotal</dt><dd>{formatOrderMoney(normalizedOrder.totals?.subtotal)}</dd></div>
-            <div><dt>Envío</dt><dd>{isDelivery ? formatOrderMoney(visibleDelivery) : "Recojo"}</dd></div>
+            <div><dt>Delivery</dt><dd>{formatOrderMoney(visibleDelivery)}</dd></div>
             <div className="order-detail-total"><dt>Total</dt><dd>{formatOrderMoney(normalizedOrder.totals?.total)}</dd></div>
           </dl>
         </article>
