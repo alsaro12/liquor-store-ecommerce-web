@@ -138,6 +138,14 @@ async function readFirebaseCollection(base) {
   return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 }
 
+async function readFirebaseCollectionRaw(collectionName) {
+  const db = getFirebaseDb();
+  const safeName = trimValue(collectionName || "");
+  if (!db || !safeName) return null;
+  const snap = await db.collection(safeName).get();
+  return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+}
+
 async function writeFirebaseCollection(base, items) {
   const db = getFirebaseDb();
   if (!db) return false;
@@ -167,11 +175,29 @@ async function writeFirebaseDoc(base, id, payload) {
   return true;
 }
 
+async function writeFirebaseDocRaw(collectionName, id, payload) {
+  const db = getFirebaseDb();
+  const safeName = trimValue(collectionName || "");
+  const safeId = trimValue(id || "");
+  if (!db || !safeName || !safeId) return false;
+  await db.collection(safeName).doc(safeId).set(cleanForFirestore(payload), { merge: true });
+  return true;
+}
+
 async function deleteFirebaseDoc(base, id) {
   const db = getFirebaseDb();
   const safeId = trimValue(id || "");
   if (!db || !safeId) return false;
   await db.collection(firebaseCollectionName(base)).doc(safeId).delete();
+  return true;
+}
+
+async function deleteFirebaseDocRaw(collectionName, id) {
+  const db = getFirebaseDb();
+  const safeName = trimValue(collectionName || "");
+  const safeId = trimValue(id || "");
+  if (!db || !safeName || !safeId) return false;
+  await db.collection(safeName).doc(safeId).delete();
   return true;
 }
 
@@ -181,6 +207,121 @@ async function getFirebaseDoc(base, id) {
   if (!db || !safeId) return null;
   const snap = await db.collection(firebaseCollectionName(base)).doc(safeId).get();
   return snap.exists ? { id: snap.id, ...snap.data() } : null;
+}
+
+async function getFirebaseDocRaw(collectionName, id) {
+  const db = getFirebaseDb();
+  const safeName = trimValue(collectionName || "");
+  const safeId = trimValue(id || "");
+  if (!db || !safeName || !safeId) return null;
+  const snap = await db.collection(safeName).doc(safeId).get();
+  return snap.exists ? { id: snap.id, ...snap.data() } : null;
+}
+
+function firestoreRestValueToJs(value) {
+  if (!value || typeof value !== "object") return null;
+  if (Object.prototype.hasOwnProperty.call(value, "stringValue")) return value.stringValue;
+  if (Object.prototype.hasOwnProperty.call(value, "integerValue")) return Number(value.integerValue || 0);
+  if (Object.prototype.hasOwnProperty.call(value, "doubleValue")) return Number(value.doubleValue || 0);
+  if (Object.prototype.hasOwnProperty.call(value, "booleanValue")) return Boolean(value.booleanValue);
+  if (Object.prototype.hasOwnProperty.call(value, "timestampValue")) return value.timestampValue;
+  if (Object.prototype.hasOwnProperty.call(value, "nullValue")) return null;
+  if (value.arrayValue) return (value.arrayValue.values || []).map(firestoreRestValueToJs);
+  if (value.mapValue) return firestoreRestFieldsToJs(value.mapValue.fields || {});
+  return null;
+}
+
+function firestoreRestFieldsToJs(fields = {}) {
+  const row = {};
+  for (const [key, value] of Object.entries(fields || {})) {
+    row[key] = firestoreRestValueToJs(value);
+  }
+  return row;
+}
+
+async function getFirebaseAccessToken() {
+  getFirebaseDb();
+  const credential = firebaseAdminApp?.options?.credential;
+  if (credential && typeof credential.getAccessToken === "function") {
+    try {
+      const token = await credential.getAccessToken();
+      const accessToken = trimValue(token?.access_token || token?.accessToken || "");
+      if (accessToken) return accessToken;
+    } catch {
+      // Cloud Run can still provide a metadata token below.
+    }
+  }
+  return new Promise((resolve) => {
+    const request = http.get({
+      hostname: "metadata.google.internal",
+      path: "/computeMetadata/v1/instance/service-accounts/default/token",
+      headers: { "Metadata-Flavor": "Google" },
+      timeout: 2500
+    }, (response) => {
+      let body = "";
+      response.setEncoding("utf8");
+      response.on("data", (chunk) => {
+        body += chunk;
+      });
+      response.on("end", () => {
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          resolve("");
+          return;
+        }
+        try {
+          const payload = JSON.parse(body || "{}");
+          resolve(trimValue(payload.access_token || ""));
+        } catch {
+          resolve("");
+        }
+      });
+    });
+    request.on("timeout", () => request.destroy());
+    request.on("error", () => resolve(""));
+  });
+}
+
+async function getFirebaseDocRest(collectionName, id) {
+  const projectId = trimValue(process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID);
+  const databaseId = trimValue(process.env.FIRESTORE_DATABASE_ID || "lalicoreria");
+  const safeName = trimValue(collectionName || "");
+  const safeId = trimValue(id || "");
+  if (!projectId || !databaseId || !safeName || !safeId) return null;
+  const accessToken = await getFirebaseAccessToken();
+  if (!accessToken) return null;
+  const requestPath = `/v1/projects/${encodeURIComponent(projectId)}/databases/${encodeURIComponent(databaseId)}/documents/${encodeURIComponent(safeName)}/${encodeURIComponent(safeId)}`;
+  return new Promise((resolve, reject) => {
+    const request = https.get({
+      hostname: "firestore.googleapis.com",
+      path: requestPath,
+      headers: { Authorization: `Bearer ${accessToken}` },
+      timeout: 4500
+    }, (response) => {
+      let body = "";
+      response.setEncoding("utf8");
+      response.on("data", (chunk) => {
+        body += chunk;
+      });
+      response.on("end", () => {
+        if (response.statusCode === 404) {
+          resolve(null);
+          return;
+        }
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          reject(new Error(`Firestore REST respondió ${response.statusCode}.`));
+          return;
+        }
+        try {
+          const payload = JSON.parse(body || "{}");
+          resolve({ id: safeId, ...firestoreRestFieldsToJs(payload.fields || {}) });
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+    request.on("timeout", () => request.destroy(new Error("Firestore REST agotó el tiempo de espera.")));
+    request.on("error", reject);
+  });
 }
 
 function getAllowedOrigins() {
@@ -6801,6 +6942,29 @@ function normalizeCouponDiscountType(value) {
   return raw === "percent" || raw === "percentage" || raw === "porcentaje" ? "percent" : "amount";
 }
 
+function readCouponBoolean(row = {}, keys = [], fallback = false) {
+  for (const key of keys) {
+    if (!Object.prototype.hasOwnProperty.call(row, key)) continue;
+    const value = row[key];
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value > 0;
+    const text = trimValue(value || "").toLowerCase();
+    if (!text) continue;
+    if (["1", "true", "si", "sí", "yes", "activo", "activa", "ilimitado", "ilimitada"].includes(text)) return true;
+    if (["0", "false", "no", "inactivo", "inactiva", "limitado", "limitada"].includes(text)) return false;
+  }
+  return fallback;
+}
+
+function firstDefined(row = {}, keys = []) {
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(row, key) && row[key] !== undefined && row[key] !== null && row[key] !== "") {
+      return row[key];
+    }
+  }
+  return undefined;
+}
+
 function normalizeCouponDate(value) {
   const text = trimValue(value || "");
   if (!text) return "";
@@ -6810,29 +6974,42 @@ function normalizeCouponDate(value) {
 }
 
 function buildCouponApiShape(row = {}) {
-  const code = normalizeCouponCode(row.code || row.codigo || row.id || "");
-  const discountType = normalizeCouponDiscountType(row.discountType || row.tipoDescuento || row.discount_type);
-  const rawValue = round2(row.discountValue ?? row.valorDescuento ?? row.discount_value ?? 0);
+  const code = normalizeCouponCode(firstDefined(row, ["code", "codigo", "couponCode", "codigoCupon", "cupon", "id"]) || "");
+  const discountType = normalizeCouponDiscountType(firstDefined(row, ["discountType", "tipoDescuento", "discount_type", "tipo", "type"]));
+  const rawValue = round2(firstDefined(row, [
+    "discountValue",
+    "valorDescuento",
+    "discount_value",
+    "discountAmount",
+    "montoDescuento",
+    "amount",
+    "monto",
+    "value",
+    "valor",
+    "descuento"
+  ]) ?? 0);
   const discountValue = discountType === "percent" ? Math.min(100, Math.max(0, rawValue)) : Math.max(0, rawValue);
-  const unlimitedDates = row.unlimitedDates === true || row.vigenciaIlimitada === true || row.unlimited_dates === true;
-  const unlimitedUses = row.unlimitedUses === true || row.usosIlimitados === true || row.unlimited_uses === true;
-  const maxUses = unlimitedUses ? null : Math.max(0, toInt(row.maxUses ?? row.max_uses ?? row.unidades ?? 0, 0));
-  const usedCount = Math.max(0, toInt(row.usedCount ?? row.used_count ?? 0, 0));
+  const startValue = firstDefined(row, ["startsAt", "desde", "starts_at", "startDate", "fechaInicio", "validFrom"]);
+  const endValue = firstDefined(row, ["endsAt", "hasta", "ends_at", "endDate", "fechaFin", "validTo"]);
+  const maxUsesValue = firstDefined(row, ["maxUses", "max_uses", "unidades", "usesLimit", "limiteUsos", "cantidad"]);
+  const maxUses = Math.max(0, toInt(maxUsesValue ?? 0, 0));
+  const usedCount = Math.max(0, toInt(firstDefined(row, ["usedCount", "used_count", "usados", "uses"]) ?? 0, 0));
+  const active = readCouponBoolean(row, ["active", "activo", "enabled", "habilitado"], true);
   return {
     id: trimValue(row.id || code || `coupon-${Date.now()}`),
-    title: trimValue(row.title || row.titulo || "").slice(0, 120),
+    title: trimValue(firstDefined(row, ["title", "titulo", "name", "nombre"]) || code || "").slice(0, 120),
     code,
-    description: trimValue(row.description || row.descripcion || "").slice(0, 240),
+    description: trimValue(firstDefined(row, ["description", "descripcion", "detalle", "note", "nota"]) || "").slice(0, 240),
     appliesTo: "delivery",
     discountType,
     discountValue,
-    unlimitedDates,
-    startsAt: unlimitedDates ? "" : normalizeCouponDate(row.startsAt || row.desde || row.starts_at),
-    endsAt: unlimitedDates ? "" : normalizeCouponDate(row.endsAt || row.hasta || row.ends_at),
-    unlimitedUses,
+    unlimitedDates: false,
+    startsAt: normalizeCouponDate(startValue),
+    endsAt: normalizeCouponDate(endValue),
+    unlimitedUses: false,
     maxUses,
     usedCount,
-    status: normalizeCouponStatus(row.status || row.estado),
+    status: active ? normalizeCouponStatus(firstDefined(row, ["status", "estado"])) : "INACTIVO",
     createdAt: trimValue(row.createdAt || row.created_at || nowIso()),
     updatedAt: trimValue(row.updatedAt || row.updated_at || nowIso())
   };
@@ -6842,22 +7019,20 @@ function assertCouponInput(coupon) {
   if (!coupon.title) throw createHttpError(400, "El cupón necesita un título.");
   if (!coupon.code) throw createHttpError(400, "El cupón necesita un código.");
   if (coupon.discountValue <= 0) throw createHttpError(400, "El descuento de delivery debe ser mayor a 0.");
-  if (!coupon.unlimitedDates && coupon.startsAt && coupon.endsAt && new Date(coupon.startsAt).getTime() > new Date(coupon.endsAt).getTime()) {
+  if (!coupon.startsAt || !coupon.endsAt) throw createHttpError(400, "Define el rango de activación del cupón.");
+  if (new Date(coupon.startsAt).getTime() > new Date(coupon.endsAt).getTime()) {
     throw createHttpError(400, "La fecha inicial no puede ser mayor que la fecha final.");
   }
-  if (!coupon.unlimitedUses && (!Number.isFinite(Number(coupon.maxUses)) || Number(coupon.maxUses) <= 0)) {
-    throw createHttpError(400, "Define unidades disponibles o marca usos ilimitados.");
-  }
+  if (!Number.isFinite(Number(coupon.maxUses)) || Number(coupon.maxUses) <= 0) throw createHttpError(400, "Define unidades disponibles del cupón.");
 }
 
 function isCouponCurrentlyValid(coupon, now = new Date()) {
   if (!coupon || coupon.status !== "ACTIVO") return false;
   const nowMs = now.getTime();
-  if (!coupon.unlimitedDates) {
-    if (coupon.startsAt && new Date(coupon.startsAt).getTime() > nowMs) return false;
-    if (coupon.endsAt && new Date(coupon.endsAt).getTime() < nowMs) return false;
-  }
-  if (!coupon.unlimitedUses && Number(coupon.usedCount || 0) >= Number(coupon.maxUses || 0)) return false;
+  if (!coupon.startsAt || !coupon.endsAt) return false;
+  if (new Date(coupon.startsAt).getTime() > nowMs) return false;
+  if (new Date(coupon.endsAt).getTime() < nowMs) return false;
+  if (Number(coupon.usedCount || 0) >= Number(coupon.maxUses || 0)) return false;
   return true;
 }
 
@@ -6874,7 +7049,15 @@ async function validateCouponForDelivery(codeInput, { shipping = 0 } = {}) {
   const code = normalizeCouponCode(codeInput || "");
   if (!code) throw createHttpError(400, "Ingresa un código de cupón.");
   const coupons = await listCouponsAll();
-  const coupon = coupons.find((item) => item.code === code);
+  let coupon = coupons.find((item) => item.code === code);
+  if (!coupon) {
+    const direct =
+      await getFirebaseDoc("coupons", code) ||
+      await getFirebaseDocRaw("coupons", code) ||
+      await getFirebaseDocRest(firebaseCollectionName("coupons"), code) ||
+      await getFirebaseDocRest("coupons", code);
+    coupon = direct ? buildCouponApiShape(direct) : null;
+  }
   if (!coupon || !isCouponCurrentlyValid(coupon)) {
     throw createHttpError(404, "Cupón no disponible.");
   }
@@ -6897,23 +7080,46 @@ async function validateCouponForDelivery(codeInput, { shipping = 0 } = {}) {
 async function consumeCouponUse(couponId) {
   const safeId = trimValue(couponId || "");
   if (!safeId) return;
-  const existing = await getFirebaseDoc("coupons", safeId);
+  let existing = await getFirebaseDoc("coupons", safeId);
+  let legacyCollection = "";
+  if (!existing) {
+    existing = await getFirebaseDocRaw("coupons", safeId);
+    legacyCollection = existing ? "coupons" : "";
+  }
+  if (!existing) {
+    existing = await getFirebaseDocRest(firebaseCollectionName("coupons"), safeId);
+  }
+  if (!existing) {
+    existing = await getFirebaseDocRest("coupons", safeId);
+    legacyCollection = existing ? "coupons" : "";
+  }
   if (!existing) return;
   const coupon = buildCouponApiShape(existing);
-  if (coupon.unlimitedUses) return;
   if (!isCouponCurrentlyValid(coupon)) {
     throw createHttpError(409, "Cupón sin unidades disponibles.");
   }
-  await writeFirebaseDoc("coupons", safeId, {
+  const payload = {
     ...existing,
     usedCount: Number(coupon.usedCount || 0) + 1,
     updatedAt: nowIso()
-  });
+  };
+  if (legacyCollection) await writeFirebaseDocRaw(legacyCollection, safeId, payload);
+  else await writeFirebaseDoc("coupons", safeId, payload);
 }
 
 async function listCouponsAll() {
-  const rows = await readFirebaseCollection("coupons");
-  return (Array.isArray(rows) ? rows : [])
+  const primaryRows = await readFirebaseCollection("coupons");
+  const legacyRows = await readFirebaseCollectionRaw("coupons");
+  const byCode = new Map();
+  for (const row of Array.isArray(legacyRows) ? legacyRows : []) {
+    const coupon = buildCouponApiShape(row);
+    if (coupon.code) byCode.set(coupon.code, coupon);
+  }
+  for (const row of Array.isArray(primaryRows) ? primaryRows : []) {
+    const coupon = buildCouponApiShape(row);
+    if (coupon.code) byCode.set(coupon.code, coupon);
+  }
+  return [...byCode.values()]
     .map(buildCouponApiShape)
     .sort((left, right) => String(right.updatedAt || "").localeCompare(String(left.updatedAt || "")));
 }
@@ -6940,6 +7146,7 @@ async function deleteCoupon(id) {
   const safeId = trimValue(id || "");
   if (!safeId) throw createHttpError(400, "Falta el cupón.");
   await deleteFirebaseDoc("coupons", safeId);
+  await deleteFirebaseDocRaw("coupons", safeId);
   return { ok: true, id: safeId };
 }
 

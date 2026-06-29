@@ -7,10 +7,8 @@ const EMPTY_COUPON = {
   description: "",
   discountType: "amount",
   discountValue: "",
-  unlimitedDates: true,
   startsAt: "",
   endsAt: "",
-  unlimitedUses: true,
   maxUses: "",
   status: "ACTIVO"
 };
@@ -40,7 +38,6 @@ function couponDiscountLabel(coupon) {
 }
 
 function couponAvailability(coupon) {
-  if (coupon.unlimitedUses) return "Usos ilimitados";
   const max = Number(coupon.maxUses || 0);
   const used = Number(coupon.usedCount || 0);
   return `${Math.max(0, max - used)} de ${max} disponibles`;
@@ -89,10 +86,8 @@ export default function AdminCouponsPage() {
       description: coupon.description || "",
       discountType: coupon.discountType || "amount",
       discountValue: String(coupon.discountValue || ""),
-      unlimitedDates: coupon.unlimitedDates !== false,
       startsAt: toDateInput(coupon.startsAt),
       endsAt: toDateInput(coupon.endsAt),
-      unlimitedUses: coupon.unlimitedUses !== false,
       maxUses: coupon.maxUses ? String(coupon.maxUses) : "",
       status: coupon.status || "ACTIVO"
     });
@@ -107,9 +102,11 @@ export default function AdminCouponsPage() {
         ...form,
         appliesTo: "delivery",
         discountValue: Number(String(form.discountValue || "0").replace(",", ".")),
-        maxUses: form.unlimitedUses ? null : Number(form.maxUses || 0),
-        startsAt: form.unlimitedDates || !form.startsAt ? "" : `${form.startsAt}T00:00:00-05:00`,
-        endsAt: form.unlimitedDates || !form.endsAt ? "" : `${form.endsAt}T23:59:59-05:00`
+        unlimitedUses: false,
+        unlimitedDates: false,
+        maxUses: Number(form.maxUses || 0),
+        startsAt: form.startsAt ? `${form.startsAt}T00:00:00-05:00` : "",
+        endsAt: form.endsAt ? `${form.endsAt}T23:59:59-05:00` : ""
       };
       await saveCoupon(editingId, payload);
       resetForm();
@@ -180,35 +177,19 @@ export default function AdminCouponsPage() {
             <span>Valor sobre delivery</span>
             <input type="number" min="0" step="0.01" value={form.discountValue} onChange={(event) => updateForm("discountValue", event.target.value)} required />
           </label>
-          <label className="admin-coupons-check">
-            <input type="checkbox" checked={form.unlimitedUses} onChange={(event) => updateForm("unlimitedUses", event.target.checked)} />
-            <span>Usos ilimitados</span>
+          <label>
+            <span>Unidades disponibles</span>
+            <input type="number" min="1" step="1" value={form.maxUses} onChange={(event) => updateForm("maxUses", event.target.value)} required />
           </label>
 
-          {!form.unlimitedUses ? (
-            <label>
-              <span>Unidades disponibles</span>
-              <input type="number" min="1" step="1" value={form.maxUses} onChange={(event) => updateForm("maxUses", event.target.value)} required />
-            </label>
-          ) : null}
-
-          <label className="admin-coupons-check">
-            <input type="checkbox" checked={form.unlimitedDates} onChange={(event) => updateForm("unlimitedDates", event.target.checked)} />
-            <span>Vigencia ilimitada</span>
+          <label>
+            <span>Desde</span>
+            <input type="date" value={form.startsAt} onChange={(event) => updateForm("startsAt", event.target.value)} required />
           </label>
-
-          {!form.unlimitedDates ? (
-            <>
-              <label>
-                <span>Desde</span>
-                <input type="date" value={form.startsAt} onChange={(event) => updateForm("startsAt", event.target.value)} />
-              </label>
-              <label>
-                <span>Hasta</span>
-                <input type="date" value={form.endsAt} onChange={(event) => updateForm("endsAt", event.target.value)} />
-              </label>
-            </>
-          ) : null}
+          <label>
+            <span>Hasta</span>
+            <input type="date" value={form.endsAt} onChange={(event) => updateForm("endsAt", event.target.value)} required />
+          </label>
 
           <label className="is-span-3">
             <span>Descripción interna</span>
@@ -252,7 +233,7 @@ export default function AdminCouponsPage() {
                 <td>{coupon.title}</td>
                 <td>{couponDiscountLabel(coupon)}</td>
                 <td>Delivery</td>
-                <td>{coupon.unlimitedDates ? "Ilimitada" : `${formatDate(coupon.startsAt)} - ${formatDate(coupon.endsAt)}`}</td>
+                <td>{`${formatDate(coupon.startsAt)} - ${formatDate(coupon.endsAt)}`}</td>
                 <td>{couponAvailability(coupon)}</td>
                 <td><span className={`admin-coupon-status is-${String(coupon.status || "").toLowerCase()}`}>{coupon.status}</span></td>
                 <td>
