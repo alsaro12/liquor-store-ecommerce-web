@@ -1,6 +1,7 @@
 import React, { Component, StrictMode, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
+import { ConfirmDialogProvider } from "./modules/storefront/common/ConfirmDialog.jsx";
 import "./styles.css";
 
 class RootErrorBoundary extends Component {
@@ -94,7 +95,11 @@ createRoot(document.getElementById("root")).render(
     createElement(
       RootErrorBoundary,
       null,
-      createElement(App)
+      createElement(
+        ConfirmDialogProvider,
+        null,
+        createElement(App)
+      )
     )
   )
 );

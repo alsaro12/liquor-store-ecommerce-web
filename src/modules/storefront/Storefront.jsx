@@ -1879,7 +1879,7 @@ export default function Storefront() {
       return;
     }
     setCartGlowTick(Date.now());
-    setCartToast({
+    setCartToast((current) => current || {
       key: Date.now(),
       name: product.name,
       imageHash: product.imageHash || ""
@@ -1975,7 +1975,7 @@ export default function Storefront() {
       return;
     }
     setCartGlowTick(Date.now());
-    setCartToast({
+    setCartToast((current) => current || {
       key: Date.now(),
       name: combo.title,
       imageUrl: combo.imageUrl || ""

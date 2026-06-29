@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { loadOrdersAll, updateOrderStatus } from "./adminApi.js";
+import { useConfirm } from "../storefront/common/ConfirmDialog.jsx";
 
 const STORE_KEY = "licoreria_admin_store_control";
 
@@ -305,6 +306,7 @@ function normalizeAdminOrder(order) {
 }
 
 export default function AdminOrdersPage() {
+  const confirmDialog = useConfirm();
   const [orders, setOrders] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [ordersLoading, setOrdersLoading] = useState(true);
@@ -417,6 +419,26 @@ export default function AdminOrdersPage() {
   function applyReason(id, type, fallback) {
     const key = `${id}:${type}`;
     return reasonDraft[key] || fallback;
+  }
+
+  async function confirmCancelOrder(order) {
+    if (!order || updatingOrderId) return;
+    const reason = applyReason(order.id, "cancel", "Cliente no recepciona");
+    const orderLabel = order.publicCode ? `Pedido ${order.publicCode}` : `Pedido ${order.id}`;
+    const confirmed = await confirmDialog({
+      icon: "!",
+      title: "Cancelar pedido",
+      description: `${orderLabel} de ${order.customer}. Motivo: ${reason}. Esta accion cambiara el estado a cancelado.`,
+      primaryLabel: "Cancelar pedido",
+      cancelLabel: "Volver",
+      danger: true
+    });
+    if (!confirmed) return;
+    await updateOrder(order.id, {
+      status: "cancelado",
+      reason
+    });
+    applyOperationalClosure(reason);
   }
 
   function advanceOrderStatus(order) {
@@ -814,14 +836,7 @@ export default function AdminOrdersPage() {
                     <option value="">Motivo</option>
                     {CANCEL_REASONS.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
                   </select>
-                  <button type="button" className="is-danger" disabled={updatingOrderId === order.id} onClick={() => {
-                    const reason = applyReason(order.id, "cancel", "Cliente no recepciona");
-                    updateOrder(order.id, {
-                      status: "cancelado",
-                      reason
-                    });
-                    applyOperationalClosure(reason);
-                  }}>
+                  <button type="button" className="is-danger" disabled={updatingOrderId === order.id} onClick={() => confirmCancelOrder(order)}>
                     Cancelar
                   </button>
                 </label>
