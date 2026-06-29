@@ -13409,6 +13409,147 @@ button.checkout-combo-toggle[aria-expanded="true"] > b::before {
   color: rgba(23, 18, 13, 0.68);
 }
 
+.order-detail-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: #17120d;
+  background: #ffd86f;
+  font-size: 0.72rem;
+  font-weight: 950;
+  line-height: 1;
+  text-transform: uppercase;
+  box-shadow: 0 12px 22px rgba(255, 216, 111, 0.24);
+}
+
+.order-detail-status-badge.is-en_camino {
+  background: #d8e8ff;
+  color: #17427b;
+}
+
+.order-detail-status-badge.is-entregado {
+  background: #dff7e8;
+  color: #14613a;
+}
+
+.order-detail-status-badge.is-cancelado,
+.order-detail-status-badge.is-rechazado {
+  background: #ffe1dc;
+  color: #9f2014;
+}
+
+.order-detail-timeline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px;
+  border: 1px solid rgba(95, 58, 16, 0.1);
+  border-radius: 18px;
+  background: #fffaf0;
+}
+
+.order-detail-step {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 7px;
+  align-items: start;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 14px;
+  opacity: 0.58;
+}
+
+.order-detail-step > span {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid #ded2bd;
+  border-radius: 999px;
+  color: #17120d;
+  background: #fff;
+  font-size: 0.68rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.order-detail-step strong {
+  display: block;
+  color: #5b3c1a;
+  font-size: 0.66rem;
+  font-weight: 950;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.order-detail-step small {
+  display: block;
+  max-width: 26ch;
+  margin-top: 4px;
+  color: #4a3521;
+  font-size: 0.64rem;
+  font-weight: 750;
+  line-height: 1.18;
+}
+
+.order-detail-step.is-done,
+.order-detail-step.is-active {
+  opacity: 1;
+}
+
+.order-detail-step.is-done > span {
+  border-color: #ffd86f;
+  background: #ffd86f;
+}
+
+.order-detail-step.is-active {
+  background: #fff2d0;
+  box-shadow: inset 0 0 0 1px rgba(255, 216, 111, 0.55);
+}
+
+.order-detail-step.is-active > span {
+  border-color: #17120d;
+  background: #17120d;
+}
+
+.order-detail-step.is-active > span::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #ffd86f;
+}
+
+.order-detail-status-cancelled {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(159, 32, 20, 0.16);
+  border-radius: 16px;
+  color: #9f2014;
+  background: #fff1ee;
+}
+
+.order-detail-status-cancelled strong {
+  flex: 0 0 auto;
+  font-size: 0.76rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.order-detail-status-cancelled span {
+  color: #6b362d;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
 .order-detail-page .page-cta {
   display: inline-flex;
   align-items: center;
@@ -13678,6 +13819,48 @@ button.checkout-combo-toggle[aria-expanded="true"] > b::before {
 
   .order-detail-modal {
     padding: 18px;
+  }
+
+  .order-detail-status-badge {
+    width: fit-content;
+    min-height: 30px;
+    padding: 0 12px;
+    font-size: 0.66rem;
+  }
+
+  .order-detail-timeline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px;
+    border-radius: 14px;
+  }
+
+  .order-detail-step {
+    grid-template-columns: 18px minmax(0, 1fr);
+    gap: 6px;
+    padding: 7px;
+    border-radius: 11px;
+  }
+
+  .order-detail-step > span {
+    width: 18px;
+    height: 18px;
+    font-size: 0.58rem;
+  }
+
+  .order-detail-step strong {
+    font-size: 0.58rem;
+  }
+
+  .order-detail-step small {
+    font-size: 0.56rem;
+    line-height: 1.12;
+  }
+
+  .order-detail-status-cancelled {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
   }
 }
 
@@ -21622,6 +21805,69 @@ button.checkout-combo-toggle[aria-expanded="true"] > b::before {
   white-space: nowrap;
 }
 
+.admin-order-header-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.admin-order-header-actions button,
+.admin-order-header-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgba(95, 58, 16, 0.16);
+  border-radius: 999px;
+  color: #1f150a;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.admin-order-header-actions a {
+  color: #0f766e;
+  background: #eefcf8;
+}
+
+.admin-order-header-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: #1f150a;
+  background: #ffd86f;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+@media (max-width: 720px) {
+  .admin-order-header-actions {
+    flex-wrap: wrap;
+  }
+}
+
+.admin-order-header-status.is-en_camino {
+  background: #d8e8ff;
+}
+
+.admin-order-header-status.is-entregado,
+.admin-order-header-status.is-rechazado,
+.admin-order-header-status.is-cancelado {
+  color: #5f6368;
+  background: #e5e7eb;
+}
+
 .admin-order-meta,
 .admin-order-actions {
   display: flex;
@@ -21678,6 +21924,111 @@ button.checkout-combo-toggle[aria-expanded="true"] > b::before {
 
 .admin-order-meta .is-en_camino {
   background: #d8e8ff;
+}
+
+.admin-order-items-detail {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(95, 58, 16, 0.14);
+  border-radius: 14px;
+  background: #fffaf0;
+}
+
+.admin-order-items-detail > strong {
+  color: #1f150a;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.admin-order-items-detail ul,
+.admin-order-items-detail ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-order-items-detail li {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-order-items-detail li > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.admin-order-items-detail b {
+  color: #10233b;
+  font-size: 12px;
+}
+
+.admin-order-items-detail span,
+.admin-order-items-detail ol li {
+  color: #6b5132;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.admin-order-items-detail ol {
+  padding-left: 12px;
+}
+
+.admin-order-items-detail ol li {
+  padding: 6px 8px;
+  border-left: 2px solid #ffd86f;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.react-admin-cigarette-link-summary,
+.react-admin-cigarette-link-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 14px;
+  background: #f2fbf8;
+}
+
+.react-admin-cigarette-link-summary strong,
+.react-admin-cigarette-link-note strong {
+  display: block;
+  color: #10233b;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.react-admin-cigarette-link-summary small,
+.react-admin-cigarette-link-note span {
+  color: #587089;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.react-admin-cigarette-link-summary button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid rgba(15, 118, 110, 0.28);
+  border-radius: 999px;
+  color: #0f766e;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.react-admin-cigarette-link-modal .react-admin-cigarette-link-note {
+  align-items: flex-start;
+  flex-direction: column;
 }
 
 .admin-order-card.is-entregado,
@@ -27302,12 +27653,14 @@ body.product-detail-lock {
 .react-admin-cigarette-presentation-row {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 7px;
+  gap: 10px;
   margin: 0;
-  padding: 10px;
+  padding: 12px 14px;
   border: 1px solid rgba(16, 38, 64, 0.1);
   border-radius: 10px;
   background: #fff;
+  min-height: 54px;
+  align-items: center;
 }
 
 .react-admin-cigarette-presentation-row span {
@@ -27318,7 +27671,8 @@ body.product-detail-lock {
   font-weight: 900;
 }
 
-.react-admin-cigarette-presentation-row input[type="checkbox"] {
+.react-admin-cigarette-presentation-row input[type="checkbox"],
+.react-admin-cigarette-presentation-row input[type="radio"] {
   width: 18px;
   height: 18px;
 }
@@ -27585,6 +27939,44 @@ body.product-detail-lock {
   text-shadow: 0 10px 24px rgba(255, 86, 51, 0.18) !important;
 }
 
+.product-detail-cigarette-prices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, max-content));
+  gap: 10px;
+  align-items: start;
+}
+
+.product-detail-unit-price.is-cigarette-price {
+  min-width: 0;
+}
+
+.product-detail-unit-price.is-cigarette-price .product-detail-price {
+  font-size: clamp(1.35rem, 2.4vw, 2.05rem);
+}
+
+.product-detail-cigarette-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, auto));
+  gap: 10px;
+  justify-content: end;
+  align-items: center;
+}
+
+.product-detail-cigarette-action {
+  display: grid;
+  gap: 5px;
+  justify-items: center;
+  min-width: 7.2rem;
+}
+
+.product-detail-cigarette-action > span {
+  color: #ffd86f !important;
+  font-size: 0.58rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  text-transform: uppercase;
+}
+
 .product-detail-stock {
   border-bottom-color: rgba(255, 216, 111, 0.14) !important;
 }
@@ -27671,6 +28063,25 @@ body.product-detail-lock {
     line-height: 1 !important;
   }
 
+  .product-detail-cigarette-prices {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .product-detail-unit-price.is-cigarette-price {
+    gap: 2px !important;
+  }
+
+  .product-detail-unit-price.is-cigarette-price .product-detail-price {
+    font-size: 0.78rem !important;
+    line-height: 0.95 !important;
+  }
+
+  .product-detail-unit-price.is-cigarette-price span {
+    font-size: 0.43rem !important;
+    line-height: 1.05 !important;
+  }
+
   .product-detail-stock {
     gap: 2px !important;
     padding-bottom: 7px !important;
@@ -27738,6 +28149,23 @@ body.product-detail-lock {
   .product-detail-cta .card-qty-control.is-detail-product .card-qty-value {
     min-width: 1.7rem !important;
     font-size: 0.78rem !important;
+  }
+
+  .product-detail-cigarette-actions {
+    grid-template-columns: 1fr !important;
+    gap: 7px !important;
+    justify-content: stretch !important;
+  }
+
+  .product-detail-cigarette-action {
+    grid-template-columns: minmax(3.4rem, 0.8fr) auto !important;
+    align-items: center !important;
+    justify-items: start !important;
+    min-width: 0 !important;
+  }
+
+  .product-detail-cigarette-action > span {
+    font-size: 0.52rem !important;
   }
 }
 

@@ -227,20 +227,24 @@ function apiStatusFromAdmin(status) {
   }[status] || String(status || "").toUpperCase();
 }
 
+function customerMapsUrl(order) {
+  const customer = order?.customerRaw || {};
+  const lat = Number(customer.latitud ?? customer.latitude);
+  const lng = Number(customer.longitud ?? customer.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return "";
+  return `https://www.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}`;
+}
+
 function normalizeAdminOrder(order) {
   const customer = order?.customer || {};
-  const deliveryText = [
-    customer.location,
-    customer.address,
-    customer.distrito,
-    customer.ciudad
-  ].filter(Boolean).join(" · ");
+  const rawItems = Array.isArray(order?.items) ? order.items : [];
   return {
     id: String(order?.id || ""),
     publicCode: String(order?.publicCode || order?.customerCode || ""),
     customer: customer.name || "Cliente",
     phone: customer.phone || "",
-    address: deliveryText || customer.address || order?.modeLabel || "",
+    address: customer.address || customer.reference || order?.modeLabel || "",
+    customerRaw: customer,
     total: Number(order?.total || order?.totals?.total || 0),
     mode: "delivery",
     modeLabel: "Delivery",
@@ -251,9 +255,8 @@ function normalizeAdminOrder(order) {
     deliveryFinanceAt: order?.deliveryFinanceAt || "",
     payment: order?.payment || "Yape / Plin",
     status: normalizeAdminStatus(order?.status),
-    items: Array.isArray(order?.items)
-      ? order.items.map((item) => `${item.quantity || 1}x ${item.name || "Producto"}`)
-      : [],
+    rawItems,
+    items: rawItems.map((item) => `${item.quantity || 1}x ${item.name || "Producto"}`),
     reason: order?.reason || order?.statusReason || "",
     createdAt: order?.createdAt || "",
     note: order?.notes || ""
@@ -278,6 +281,7 @@ export default function AdminOrdersPage() {
     return { ...stored, schedule: normalizeSchedule(stored.schedule) };
   });
   const [reasonDraft, setReasonDraft] = useState({});
+  const [expandedDetails, setExpandedDetails] = useState({});
   const [deliveryFinanceOrder, setDeliveryFinanceOrder] = useState(null);
   const [deliveryFinanceIntent, setDeliveryFinanceIntent] = useState("edit");
   const [deliveryFinanceForm, setDeliveryFinanceForm] = useState({ cost: "", note: "" });
@@ -296,6 +300,10 @@ export default function AdminOrdersPage() {
       manualClosed: store.open,
       autoClosedReason: store.open ? "Cierre manual" : ""
     });
+  }
+
+  function toggleOrderDetails(orderId) {
+    setExpandedDetails((current) => ({ ...current, [orderId]: !current[orderId] }));
   }
 
   function applyOperationalClosure(reason) {
@@ -666,20 +674,56 @@ export default function AdminOrdersPage() {
               <header>
                 <div>
                   <span>Código interno {order.id}</span>
-                  <small>Código cliente/vendedor {order.publicCode || order.id}</small>
+                  <small>Código cliente {order.publicCode || "Sin código cliente"}</small>
                   <h2>{order.customer}</h2>
                   <p>{order.phone} · {order.address}</p>
+                  <div className="admin-order-header-actions">
+                    <button type="button" onClick={() => toggleOrderDetails(order.id)}>
+                      {expandedDetails[order.id] ? "Ocultar detalle" : "Ver detalle"}
+                    </button>
+                    {customerMapsUrl(order) ? (
+                      <a href={customerMapsUrl(order)} target="_blank" rel="noreferrer" aria-label={`Abrir mapa de ${order.customer}`}>
+                        <span aria-hidden="true">⌖</span>
+                        Mapa
+                      </a>
+                    ) : null}
+                    <span className={`admin-order-header-status is-${order.status}`}>
+                      {statusLabel(order.status)}
+                    </span>
+                  </div>
                 </div>
                 <strong>{money(order.total)}</strong>
               </header>
             </div>
-
-            <div className="admin-order-meta">
-              <span className={`is-status is-${order.status}`}>{statusLabel(order.status)}</span>
-              <span>{order.payment}</span>
-              <span>{order.modeLabel}</span>
-              <span>{order.items.join(" + ")}</span>
-            </div>
+            {expandedDetails[order.id] ? (
+              <div className="admin-order-items-detail">
+                <strong>Detalle para entrega</strong>
+                <ul>
+                  {order.rawItems.map((item, index) => {
+                    const comboLines = item.type === "combo" && Array.isArray(item.items)
+                      ? item.items.filter((line) => line?.name)
+                      : [];
+                    return (
+                      <li key={`${order.id}-item-${index}`}>
+                        <div>
+                          <b>{item.quantity || 1}x {item.name || "Producto"}</b>
+                          <span>{money(Number(item.price || 0) * Number(item.quantity || 1))}</span>
+                        </div>
+                        {comboLines.length ? (
+                          <ol>
+                            {comboLines.map((line, lineIndex) => (
+                              <li key={`${order.id}-combo-${index}-${lineIndex}`}>
+                                {line.quantity || 1}x {line.name || "Producto"}
+                              </li>
+                            ))}
+                          </ol>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : null}
             {order.mode === "delivery" ? (
               <div className={`admin-order-delivery-finance ${order.deliveryCost === null ? "is-pending" : ""}`}>
                 <div>

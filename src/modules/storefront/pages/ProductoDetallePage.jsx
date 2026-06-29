@@ -7,6 +7,56 @@ function formatMoney(value) {
   return `S/ ${Number(value || 0).toFixed(2)}`;
 }
 
+function isCigaretteProduct(product) {
+  return String(product?.category || "").trim().toLowerCase() === "cigarros";
+}
+
+function normalizeCigarettePresentations(product) {
+  if (!isCigaretteProduct(product)) return [];
+  const source = Array.isArray(product?.cigarettePresentations) ? product.cigarettePresentations : [];
+  const normalized = source
+    .map((item) => {
+      const id = String(item?.id || "").trim().toLowerCase();
+      if (!["unit", "box10", "box20"].includes(id)) return null;
+      const fallbackLabel = id === "unit" ? "Unidad" : id === "box10" ? "Caja x10" : "Caja x20";
+      const reportUnits = id === "box20" ? 20 : 1;
+      return {
+        id,
+        label: String(item?.label || fallbackLabel).trim() || fallbackLabel,
+        price: Number(item?.price ?? item?.precio ?? 0),
+        enabled: item?.enabled !== false && item?.activo !== false,
+        units: Number(item?.units || (id === "box20" ? 20 : id === "box10" ? 10 : 1)),
+        reportUnits
+      };
+    })
+    .filter((item) => item && item.enabled && item.price > 0);
+  return normalized.slice(0, 1);
+}
+
+function cigarettePriceLabel(presentation) {
+  if (presentation.id === "box20") return "Precio por caja x20";
+  if (presentation.id === "box10") return "Precio por caja x10";
+  return "Precio por unidad";
+}
+
+function cigaretteCartProduct(product, presentation) {
+  const reportUnits = Math.max(1, Number(presentation?.reportUnits || 1));
+  const stock = Math.floor(Math.max(0, Number(product?.stock || 0)) / reportUnits);
+  return {
+    ...product,
+    id: `${product.id}::${presentation.id}`,
+    productId: product.id,
+    parentProductId: product.id,
+    name: `${product.name} - ${presentation.label}`,
+    price: Number(presentation.price || 0),
+    stock,
+    cigarettePresentation: presentation.id,
+    cigarettePresentationLabel: presentation.label,
+    cigarettePresentationUnits: Number(presentation.units || reportUnits),
+    cigarettePresentationReportUnits: reportUnits
+  };
+}
+
 function productImage(product) {
   return resolveProductImage(product) || "";
 }
@@ -141,8 +191,18 @@ export default function ProductoDetallePage({
   const category = product.category || "Producto";
   const stock = Number(product.stock || 0);
   const related = relatedProductsFor(product, products);
-  const quantityInCart = getQuantity?.(product) || 0;
-  const productSubtotal = Number(product.price || 0) * quantityInCart;
+  const cigarettePresentations = normalizeCigarettePresentations(product);
+  const isCigarette = cigarettePresentations.length > 0;
+  const cigaretteLines = cigarettePresentations.map((presentation) => ({
+    presentation,
+    item: cigaretteCartProduct(product, presentation)
+  }));
+  const quantityInCart = isCigarette
+    ? cigaretteLines.reduce((sum, line) => sum + Number(getQuantity?.(line.item) || 0), 0)
+    : getQuantity?.(product) || 0;
+  const productSubtotal = isCigarette
+    ? cigaretteLines.reduce((sum, line) => sum + Number(line.item.price || 0) * Number(getQuantity?.(line.item) || 0), 0)
+    : Number(product.price || 0) * quantityInCart;
   function handleFavoriteAction(event) {
     event.preventDefault();
     event.stopPropagation();
@@ -189,10 +249,21 @@ export default function ProductoDetallePage({
           <div className="product-detail-info">
             <span className="premium-detail-kicker">{category}</span>
             <h1>{product.name}</h1>
-            <div className="product-detail-unit-price">
-              <strong className="product-detail-price">{formatMoney(product.price)}</strong>
-              <span>Precio por unidad</span>
-            </div>
+            {isCigarette ? (
+              <div className="product-detail-cigarette-prices" aria-label="Precios por presentación">
+                {cigaretteLines.map(({ presentation }) => (
+                  <div className="product-detail-unit-price is-cigarette-price" key={presentation.id}>
+                    <strong className="product-detail-price">{formatMoney(presentation.price)}</strong>
+                    <span>{cigarettePriceLabel(presentation)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="product-detail-unit-price">
+                <strong className="product-detail-price">{formatMoney(product.price)}</strong>
+                <span>Precio por unidad</span>
+              </div>
+            )}
             <div className="product-detail-stock">
               <b>{stock > 0 ? "Disponible" : "Sin stock"}</b>
             </div>
@@ -205,16 +276,36 @@ export default function ProductoDetallePage({
             <strong>{formatMoney(productSubtotal)}</strong>
             <span>Total seleccionado</span>
           </div>
-          {quantityInCart > 0 ? (
-            <CardQuantityControl
-              quantity={quantityInCart}
-              max={stock}
-              ariaLabel={`Cantidad de ${product.name}`}
-              onIncrement={() => onAdd?.(product)}
-              onDecrement={() => onDecrease?.(product)}
-              className="is-detail-product"
-              expandOnQuantity
-            />
+          {isCigarette ? (
+            <div className="product-detail-cigarette-actions">
+              {cigaretteLines.map(({ presentation, item }) => {
+                const lineQuantity = getQuantity?.(item) || 0;
+                return (
+                  <div className="product-detail-cigarette-action" key={presentation.id}>
+                    <span>{presentation.label}</span>
+                    <CardQuantityControl
+                      quantity={lineQuantity}
+                      max={item.stock}
+                      ariaLabel={`Cantidad de ${product.name} ${presentation.label}`}
+                      onIncrement={() => onAdd?.(item)}
+                      onDecrement={() => onDecrease?.(item)}
+                      className="is-detail-product"
+                      expandOnQuantity
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          ) : quantityInCart > 0 ? (
+              <CardQuantityControl
+                quantity={quantityInCart}
+                max={stock}
+                ariaLabel={`Cantidad de ${product.name}`}
+                onIncrement={() => onAdd?.(product)}
+                onDecrement={() => onDecrease?.(product)}
+                className="is-detail-product"
+                expandOnQuantity
+              />
           ) : (
             <button type="button" onClick={(event) => addProduct(event)} disabled={stock <= 0}>
               <span aria-hidden="true">+</span>

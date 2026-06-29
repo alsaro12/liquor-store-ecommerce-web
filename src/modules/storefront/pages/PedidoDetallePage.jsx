@@ -68,6 +68,67 @@ function normalizeOrderDetail(order) {
   };
 }
 
+const CUSTOMER_ORDER_STEPS = [
+  {
+    key: "PENDIENTE",
+    label: "Pedido recibido",
+    message: "Recibimos tu pedido. Estamos revisando el pago."
+  },
+  {
+    key: "VALIDADO",
+    label: "Pago aprobado",
+    message: "Tu pago fue confirmado. Estamos preparando tu pedido."
+  },
+  {
+    key: "EN_CAMINO",
+    label: "En camino",
+    message: "Tu pedido salió de tienda y va hacia tu dirección."
+  },
+  {
+    key: "ENTREGADO",
+    label: "Entregado",
+    message: "Tu pedido fue entregado correctamente."
+  }
+];
+
+const STATUS_ALIASES = {
+  APROBADO: "VALIDADO",
+  PAGADO: "VALIDADO",
+  ENVIADO: "EN_CAMINO",
+  "EN CAMINO": "EN_CAMINO",
+  FINALIZADO: "ENTREGADO",
+  CERRADO: "ENTREGADO",
+  COMPLETADO: "ENTREGADO"
+};
+
+function normalizeOrderStatus(status) {
+  const normalized = String(status || "PENDIENTE").trim().toUpperCase().replace(/\s+/g, "_");
+  return STATUS_ALIASES[normalized] || normalized;
+}
+
+function currentCustomerStep(status) {
+  const normalized = normalizeOrderStatus(status);
+  if (["CANCELADO", "RECHAZADO"].includes(normalized)) {
+    return {
+      key: normalized,
+      label: "Cancelado",
+      message: "Este pedido fue cancelado. Revisa el motivo o contáctanos si necesitas ayuda."
+    };
+  }
+  return CUSTOMER_ORDER_STEPS.find((step) => step.key === normalized) || CUSTOMER_ORDER_STEPS[0];
+}
+
+function customerStepState(status, stepKey) {
+  const normalized = normalizeOrderStatus(status);
+  if (["CANCELADO", "RECHAZADO"].includes(normalized)) return "muted";
+  const currentIndex = CUSTOMER_ORDER_STEPS.findIndex((step) => step.key === normalized);
+  const stepIndex = CUSTOMER_ORDER_STEPS.findIndex((step) => step.key === stepKey);
+  if (currentIndex < 0 || stepIndex < 0) return "pending";
+  if (stepIndex < currentIndex) return "done";
+  if (stepIndex === currentIndex) return "active";
+  return "pending";
+}
+
 function normalizeText(value) {
   return String(value || "")
     .normalize("NFD")
@@ -129,6 +190,8 @@ export function OrderDetailContent({ order, productsMap, combos }) {
   const orderCode = displayOrderCode(normalizedOrder);
   const locationMapUrl = isDelivery ? mapUrl(normalizedOrder) : "";
   const visibleDelivery = Number(normalizedOrder.totals?.shipping || 0);
+  const activeStatus = currentCustomerStep(normalizedOrder.status);
+  const normalizedStatus = normalizeOrderStatus(normalizedOrder.status);
 
   function toggleComboDetail(key) {
     setExpandedCombos((current) => {
@@ -147,7 +210,32 @@ export function OrderDetailContent({ order, productsMap, combos }) {
           <h1>Detalle del pedido</h1>
           <p>Resumen listo para logística y seguimiento del pedido.</p>
         </div>
+        <strong className={`order-detail-status-badge is-${normalizedStatus.toLowerCase()}`}>
+          {activeStatus.label}
+        </strong>
       </div>
+
+      {["CANCELADO", "RECHAZADO"].includes(normalizedStatus) ? (
+        <div className="order-detail-status-cancelled">
+          <strong>{activeStatus.label}</strong>
+          <span>{normalizedOrder.statusReason || normalizedOrder.reason || activeStatus.message}</span>
+        </div>
+      ) : (
+        <div className="order-detail-timeline" aria-label="Estado del pedido">
+          {CUSTOMER_ORDER_STEPS.map((step) => {
+            const state = customerStepState(normalizedOrder.status, step.key);
+            return (
+              <div key={step.key} className={`order-detail-step is-${state}`}>
+                <span aria-hidden="true">{state === "done" ? "✓" : ""}</span>
+                <div>
+                  <strong>{step.label}</strong>
+                  {state === "active" ? <small>{step.message}</small> : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="order-detail-grid">
         <article className="order-detail-card">

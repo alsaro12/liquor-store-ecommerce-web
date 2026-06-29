@@ -35,12 +35,24 @@ function normalizeCigarettePresentations(value, basePrice = 0) {
     { id: "box10", label: "Caja x10", units: 10, enabled: false, price: 0 },
     { id: "box20", label: "Caja x20", units: 20, enabled: false, price: 0 }
   ];
-  return defaults.map((preset) => {
+  const normalized = defaults.map((preset) => {
     const item = source.find((entry) => String(entry?.id || "").toLowerCase() === preset.id);
     return item
-      ? { ...preset, enabled: preset.id === "unit" || item.enabled !== false, price: Number(item.price ?? item.precio ?? preset.price) }
+      ? {
+        ...preset,
+        enabled: item.enabled !== false && item.activo !== false,
+        reportUnits: preset.id === "box20" ? 20 : 1,
+        price: Number(item.price ?? item.precio ?? preset.price)
+      }
       : preset;
-  }).filter((item) => item.enabled);
+  });
+  const activeIndex = normalized.findIndex((item) => item.enabled);
+  return normalized
+    .map((item, index) => ({
+      ...item,
+      enabled: activeIndex < 0 ? item.id === "unit" : index === activeIndex
+    }))
+    .filter((item) => item.enabled);
 }
 
 function buildSmartIngressRowsFromProducts(products) {

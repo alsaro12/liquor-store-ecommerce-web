@@ -3,7 +3,7 @@ export const YAPE_NUMBER = "940189609";
 const ORDER_STORAGE_KEY = "licoreria_order_details_v1";
 
 function publicOrderCode(order) {
-  return String(order?.publicCode || order?.customerCode || order?.id || "").trim();
+  return String(order?.publicCode || order?.customerCode || "").trim();
 }
 
 export function formatOrderMoney(value) {
@@ -13,6 +13,12 @@ export function formatOrderMoney(value) {
 export function getOrderDetailUrl(orderId) {
   if (typeof window === "undefined") return `/pedido/${encodeURIComponent(orderId)}`;
   return `${window.location.origin}/pedido/${encodeURIComponent(orderId)}`;
+}
+
+function getMapsUrlFromCoords(coords) {
+  const match = String(coords || "").match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+  if (!match) return "";
+  return `https://www.google.com/maps?q=${encodeURIComponent(`${match[1]},${match[2]}`)}`;
 }
 
 export function saveOrderDetail(order) {
@@ -56,10 +62,7 @@ export function buildWhatsappOrderMessage(order) {
   lines.push(`*TOTAL A PAGAR: ${formatOrderMoney(totals.total)}*`);
   lines.push(`*Yapear a: ${YAPE_NUMBER} Grecia Chirinos*`);
   lines.push("En cuanto realice el Yape enviaré la captura para confirmar el pedido.");
-  lines.push("");
   lines.push("━━━━━━━━━━━━━━");
-  lines.push("*PRODUCTOS*");
-  lines.push("");
   items.forEach((item) => {
     const itemTotal = Number(item.price || 0) * Number(item.quantity || 1);
     const comboItems = Array.isArray(item.items) ? item.items.filter((line) => line?.name) : [];
@@ -71,16 +74,14 @@ export function buildWhatsappOrderMessage(order) {
       });
     }
   });
-  lines.push("");
   lines.push(`🧾 Subtotal: ${formatOrderMoney(totals.subtotal)}`);
   lines.push(`🚚 Delivery: ${formatOrderMoney(deliveryTotal)}`);
-  lines.push("");
   lines.push("━━━━━━━━━━━━━━");
   lines.push("📍 *DATOS DE ENTREGA*");
-  lines.push("");
   lines.push(`👤 ${customer.name || "-"}`);
   lines.push(`📞 ${customer.phone || "-"}`);
   if (isDelivery) {
+    const mapsUrl = getMapsUrlFromCoords(delivery.coords);
     const deliveryLine = [
       delivery.location,
       delivery.address,
@@ -88,13 +89,11 @@ export function buildWhatsappOrderMessage(order) {
       delivery.coords ? `Coordenadas: ${delivery.coords}` : ""
     ].filter(Boolean).join(" · ");
     if (deliveryLine) lines.push(`📌 ${deliveryLine}`);
+    if (mapsUrl) lines.push(`🗺️ Mapa: ${mapsUrl}`);
   }
-  lines.push("");
   lines.push("━━━━━━━━━━━━━━");
   lines.push(`📝 *NOTAS* ${order?.notes || "Sin notas adicionales."}`);
-  lines.push("");
   lines.push("━━━━━━━━━━━━━━");
-  lines.push("");
   lines.push("🔗 Detalle del pedido:");
   lines.push(detailUrl);
 

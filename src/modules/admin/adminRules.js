@@ -141,6 +141,7 @@ export function normalizeProduct(item) {
           ? item.images
         : [],
     cigarettePresentations: normalizeCigarettePresentations(item?.CIGARRO_PRESENTACIONES ?? item?.cigarettePresentations ?? item?.presentacionesCigarro),
+    cigaretteStockLink: item?.CIGARRO_STOCK_LINK ?? item?.cigaretteStockLink ?? item?.stockLinkCigarro ?? null,
     variants: normalizeProductVariants(item?.VARIANTES ?? item?.variants ?? item?.variantes),
     stock: stockActual,
     stockMin: stockMinimo,
@@ -164,7 +165,7 @@ export function normalizeCigarettePresentations(value) {
       list = [];
     }
   }
-  return list
+  const normalized = list
     .map((item) => {
       const id = String(item?.id ?? item?.tipo ?? "").trim().toLowerCase();
       const units = Number(item?.units ?? item?.unidades ?? 1);
@@ -173,11 +174,17 @@ export function normalizeCigarettePresentations(value) {
         id,
         label: String(item?.label ?? item?.nombre ?? (id === "unit" ? "Unidad" : id === "box10" ? "Caja x10" : "Caja x20")).trim(),
         units,
+        reportUnits: id === "box20" ? 20 : 1,
         enabled: item?.enabled !== false && item?.activo !== false,
         price: Number(item?.price ?? item?.precio ?? 0)
       };
     })
     .filter(Boolean);
+  const activeIndex = normalized.findIndex((item) => item.enabled);
+  return normalized.map((item, index) => ({
+    ...item,
+    enabled: activeIndex < 0 ? item.id === "unit" : index === activeIndex
+  }));
 }
 
 export function normalizeProductVariants(value) {

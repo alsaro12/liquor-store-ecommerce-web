@@ -43,7 +43,8 @@ function normalizeOrder(order) {
   const cost = hasCost ? Number(order.deliveryCost) : null;
   return {
     id: String(order?.id || ""),
-    code: String(order?.publicCode || order?.customerCode || order?.id || ""),
+    code: String(order?.id || ""),
+    customerCode: String(order?.publicCode || order?.customerCode || ""),
     customer: customer.name || "Cliente",
     createdAt: order?.createdAt || "",
     status,
@@ -200,7 +201,10 @@ export default function AdminDeliveryIncomePage() {
             <tbody>
               {filteredOrders.map((order) => (
                 <tr key={order.id}>
-                  <td>{order.code || order.id}</td>
+                  <td>
+                    <strong>{order.code || order.id}</strong>
+                    {order.customerCode ? <small>Cliente {order.customerCode}</small> : null}
+                  </td>
                   <td>{order.customer}</td>
                   <td>{order.createdAt || "-"}</td>
                   <td>{statusLabel(order.status)}</td>

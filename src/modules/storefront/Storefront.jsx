@@ -1866,7 +1866,11 @@ export default function Storefront() {
           stock: stockLimit,
           imageHash: product.imageHash || "",
           imageUrl: product.imageUrl || "",
-          category: product.category || ""
+          category: product.category || "",
+          cigarettePresentation: product.cigarettePresentation || "",
+          cigarettePresentationLabel: product.cigarettePresentationLabel || "",
+          cigarettePresentationUnits: product.cigarettePresentationUnits || 0,
+          cigarettePresentationReportUnits: product.cigarettePresentationReportUnits || 0
         }
       ];
     });

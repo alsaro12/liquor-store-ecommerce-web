@@ -35,6 +35,12 @@ const EMPTY_FORM = {
     { id: "box10", label: "Caja x10", units: 10, enabled: false, price: "0" },
     { id: "box20", label: "Caja x20", units: 20, enabled: false, price: "0" }
   ],
+  cigaretteStockLink: {
+    enabled: false,
+    unitProductId: "",
+    box20ProductId: "",
+    unitsPerBox: 20
+  },
   variants: []
 };
 
@@ -75,13 +81,24 @@ function normalizeFormFromProduct(item) {
     status: product.status || "ACTIVO",
     images: Array.isArray(product.images) ? product.images.slice(0, 3) : [],
     cigarettePresentations: normalizeCigarettePresentationsForForm(product.cigarettePresentations, product.price),
+    cigaretteStockLink: normalizeCigaretteStockLink(product.cigaretteStockLink),
     variants: extraVariants
+  };
+}
+
+function normalizeCigaretteStockLink(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    enabled: source.enabled === true,
+    unitProductId: String(source.unitProductId || source.unit_product_id || ""),
+    box20ProductId: String(source.box20ProductId || source.box20_product_id || ""),
+    unitsPerBox: Number(source.unitsPerBox || source.units_per_box || 20) || 20
   };
 }
 
 function normalizeCigarettePresentationsForForm(value, basePrice = 0) {
   const source = Array.isArray(value) ? value : [];
-  return EMPTY_FORM.cigarettePresentations.map((preset) => {
+  const rows = EMPTY_FORM.cigarettePresentations.map((preset) => {
     const item = source.find((entry) => String(entry?.id || entry?.tipo || "").toLowerCase() === preset.id);
     return {
       ...preset,
@@ -89,6 +106,11 @@ function normalizeCigarettePresentationsForForm(value, basePrice = 0) {
       price: String(item?.price ?? item?.precio ?? (preset.id === "unit" ? basePrice : "0"))
     };
   });
+  const activeIndex = rows.findIndex((item) => item.enabled);
+  return rows.map((item, index) => ({
+    ...item,
+    enabled: activeIndex < 0 ? item.id === "unit" : index === activeIndex
+  }));
 }
 
 function buildCigarettePresentationsPayload(form) {
@@ -96,9 +118,40 @@ function buildCigarettePresentationsPayload(form) {
     id: item.id,
     label: item.label,
     units: Number(item.units || 1),
-    enabled: item.id === "unit" ? true : Boolean(item.enabled),
-    price: item.id === "unit" ? Number(form.price || 0) : Number(item.price || 0)
+    reportUnits: item.id === "box20" ? 20 : 1,
+    enabled: Boolean(item.enabled),
+    price: item.enabled ? Number(item.price || 0) : 0
   }));
+}
+
+function resolveCigaretteBasePrice(form) {
+  const presentations = buildCigarettePresentationsPayload(form);
+  const active = presentations.find((item) => item.enabled && Number(item.price || 0) > 0);
+  return Number(active?.price || 0);
+}
+
+function validateCigarettePresentations(form) {
+  const presentations = buildCigarettePresentationsPayload(form);
+  const active = presentations.filter((item) => item.enabled);
+  if (!active.length) {
+    throw new Error("Activa al menos una presentacion de cigarro.");
+  }
+  const missingPrice = active.find((item) => Number(item.price || 0) <= 0);
+  if (missingPrice) {
+    throw new Error(`Ingresa el precio de ${missingPrice.label}.`);
+  }
+}
+
+function selectedCigarettePresentationId(form) {
+  const selected = normalizeCigarettePresentationsForForm(form.cigarettePresentations, form.price)
+    .find((item) => item.enabled);
+  return selected?.id || "unit";
+}
+
+function selectedCigarettePresentationPrice(form) {
+  const selected = normalizeCigarettePresentationsForForm(form.cigarettePresentations, form.price)
+    .find((item) => item.enabled);
+  return Number(selected?.price || 0);
 }
 
 function buildVariantId(name, index) {
@@ -114,6 +167,9 @@ function buildVariantId(name, index) {
 function buildVariantsPayload(variants, form = null) {
   const baseFlavor = String(form?.baseFlavor || "").trim();
   const baseStock = Number(form?.baseStock || 0);
+  const category = normalizeFormCategory(form?.category);
+  const isCigarette = category === "Cigarros";
+  const cigarettePrice = isCigarette ? selectedCigarettePresentationPrice(form) : null;
   const extras = (Array.isArray(variants) ? variants : [])
     .map((variant, index) => {
       const name = String(variant.name || "").trim();
@@ -122,7 +178,7 @@ function buildVariantsPayload(variants, form = null) {
         id: String(variant.id || buildVariantId(name, index)).trim(),
         name,
         description: String(variant.description || "").trim(),
-        price: variant.price === "" || variant.price === null || variant.price === undefined ? null : Number(variant.price || 0),
+        price: isCigarette ? cigarettePrice : variant.price === "" || variant.price === null || variant.price === undefined ? null : Number(variant.price || 0),
         purchasePrice: variant.purchasePrice === "" || variant.purchasePrice === null || variant.purchasePrice === undefined ? null : Number(variant.purchasePrice || 0),
         stock: Number(variant.stock || 0),
         stockMin: Number(variant.stockMin || 0),
@@ -137,7 +193,7 @@ function buildVariantsPayload(variants, form = null) {
       id: "__base",
       name: baseFlavor || "Original",
       description: String(form?.description || "").trim(),
-      price: null,
+      price: isCigarette ? cigarettePrice : null,
       purchasePrice: null,
       stock: baseStock,
       stockMin: Number(form?.stockMin || 0),
@@ -150,11 +206,13 @@ function buildVariantsPayload(variants, form = null) {
 }
 
 function buildPayloadFromForm(form, mode) {
+  const category = normalizeFormCategory(form.category);
+  const isCigarette = category === "Cigarros";
   const payload = {
     NOMBRE: form.name,
     DESCRIPCION: form.description,
-    CATEGORIA: normalizeFormCategory(form.category),
-    PRECIO: Number(form.price || 0),
+    CATEGORIA: category,
+    PRECIO: isCigarette ? resolveCigaretteBasePrice(form) : Number(form.price || 0),
     PRECIO_COMPRA: Number(form.purchasePrice || 0),
     STOCK_MAXIMO: Number(form.stockMax || 0),
     STOCK_MINIMO: Number(form.stockMin || 0),
@@ -163,6 +221,7 @@ function buildPayloadFromForm(form, mode) {
     ESTADO: form.status,
     IMAGENES: Array.isArray(form.images) ? form.images.slice(0, 3) : [],
     CIGARRO_PRESENTACIONES: buildCigarettePresentationsPayload(form),
+    CIGARRO_STOCK_LINK: isCigarette ? normalizeCigaretteStockLink(form.cigaretteStockLink) : { enabled: false },
     VARIANTES: buildVariantsPayload(form.variants, form)
   };
   if (mode === "create" && form.id) {
@@ -276,6 +335,7 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
   const [comboForm, setComboForm] = useState(EMPTY_COMBO_FORM);
   const [comboImageState, setComboImageState] = useState({ processing: false, error: "" });
   const [comboProductOptions, setComboProductOptions] = useState([]);
+  const [cigaretteLinkModal, setCigaretteLinkModal] = useState({ open: false });
   const productsCacheRef = useRef(new Map());
   const statsCacheRef = useRef(null);
   const latestProductsLoadRef = useRef(0);
@@ -414,6 +474,9 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
   ), [form.variants]);
   const productStockTotal = Number(form.stockActual || 0);
   const isCigaretteForm = normalizeFormCategory(form.category) === "Cigarros";
+  const cigaretteProductOptions = useMemo(() => (
+    comboProductOptions.filter((product) => normalizeFormCategory(product.category) === "Cigarros")
+  ), [comboProductOptions]);
 
   useEffect(() => {
     if (!quickIngressRequest || !items.length || ingress.open) return;
@@ -435,8 +498,27 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
     setForm((current) => ({
       ...current,
       cigarettePresentations: normalizeCigarettePresentationsForForm(current.cigarettePresentations, current.price).map((item) => (
-        item.id === id ? { ...item, ...patch, enabled: item.id === "unit" ? true : patch.enabled ?? item.enabled } : item
+        item.id === id
+          ? {
+            ...item,
+            ...patch,
+            enabled: patch.enabled ?? item.enabled
+          }
+          : patch.enabled === true
+            ? { ...item, enabled: false }
+            : item
       ))
+    }));
+  }
+
+  function updateCigaretteStockLink(patch) {
+    setForm((current) => ({
+      ...current,
+      cigaretteStockLink: {
+        ...normalizeCigaretteStockLink(current.cigaretteStockLink),
+        ...patch,
+        unitsPerBox: 20
+      }
     }));
   }
 
@@ -691,6 +773,9 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
     setError("");
     try {
       await loadRuntimeStatus();
+      if (normalizeFormCategory(form.category) === "Cigarros") {
+        validateCigarettePresentations(form);
+      }
       const payload = buildPayloadFromForm(form, modal.mode);
       let successMessage = "";
       if (modal.mode === "create") {
@@ -1006,10 +1091,18 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                   ))}
                 </select>
               </label>
-              <label>
-                Precio
-                <input type="number" min="0" step="0.01" value={form.price} onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))} />
-              </label>
+              {!isCigaretteForm ? (
+                <label>
+                  Precio
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.price}
+                    onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))}
+                  />
+                </label>
+              ) : null}
               <label>
                 Precio compra
                 <input type="number" min="0" step="0.01" value={form.purchasePrice} onChange={(event) => setForm((current) => ({ ...current, purchasePrice: event.target.value }))} />
@@ -1018,26 +1111,38 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                 <div className="is-span-3 react-admin-cigarette-presentations">
                   <div>
                     <strong>Presentaciones de cigarro</strong>
-                    <small>El stock se maneja en unidades. Caja x10 y caja x20 se convierten a unidades en el Excel.</small>
+                    <small>Unidad y caja x10 cuentan como 1 en el reporte. Caja x20 cuenta como 20 unidades.</small>
+                  </div>
+                  <div className="react-admin-cigarette-link-summary">
+                    <div>
+                      <strong>Enlace de stock unidad/caja x20</strong>
+                      <small>
+                        {normalizeCigaretteStockLink(form.cigaretteStockLink).enabled
+                          ? `Activo: unidad ${normalizeCigaretteStockLink(form.cigaretteStockLink).unitProductId || "-"} desde caja ${normalizeCigaretteStockLink(form.cigaretteStockLink).box20ProductId || "-"}`
+                          : "Sin enlace automático"}
+                      </small>
+                    </div>
+                    <button type="button" onClick={() => setCigaretteLinkModal({ open: true })}>
+                      Enlazar stock
+                    </button>
                   </div>
                   <div className="react-admin-cigarette-presentation-grid">
                     {normalizeCigarettePresentationsForForm(form.cigarettePresentations, form.price).map((presentation) => (
                       <label key={presentation.id} className="react-admin-cigarette-presentation-row">
                         <span>
                           <input
-                            type="checkbox"
-                            checked={presentation.enabled}
-                            disabled={presentation.id === "unit"}
-                            onChange={(event) => updateCigarettePresentation(presentation.id, { enabled: event.target.checked })}
+                            type="radio"
+                            name="cigarette-presentation"
+                            checked={selectedCigarettePresentationId(form) === presentation.id}
+                            onChange={() => updateCigarettePresentation(presentation.id, { enabled: true })}
                           />
                           {presentation.label}
                         </span>
-                        <small>{presentation.units} unidad{presentation.units === 1 ? "" : "es"}</small>
                         <input
                           type="number"
                           min="0"
                           step="0.01"
-                          value={presentation.id === "unit" && Number(presentation.price || 0) === 0 ? form.price : presentation.price}
+                          value={presentation.enabled ? presentation.price : "0"}
                           disabled={!presentation.enabled}
                           onChange={(event) => updateCigarettePresentation(presentation.id, { price: event.target.value })}
                           placeholder="Precio"
@@ -1143,7 +1248,15 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                         </label>
                         <label>
                           Precio
-                          <input type="number" min="0" step="0.01" value={variant.price ?? ""} onChange={(event) => updateVariant(index, { price: event.target.value })} placeholder={form.price} />
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={isCigaretteForm ? selectedCigarettePresentationPrice(form) : variant.price ?? ""}
+                            disabled={isCigaretteForm}
+                            onChange={(event) => updateVariant(index, { price: event.target.value })}
+                            placeholder={isCigaretteForm ? selectedCigarettePresentationPrice(form) : form.price}
+                          />
                         </label>
                         <label>
                           Stock
@@ -1180,6 +1293,77 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      ) : null}
+
+      {cigaretteLinkModal.open ? (
+        <div className="react-admin-modal-backdrop">
+          <div className="react-admin-modal react-admin-modal-sm react-admin-cigarette-link-modal">
+            <div className="react-admin-modal-head">
+              <div>
+                <span className="react-admin-filter-kicker">Cigarros</span>
+                <h3>Enlazar stock automático</h3>
+              </div>
+              <button type="button" className="react-admin-icon-close" onClick={() => setCigaretteLinkModal({ open: false })}>×</button>
+            </div>
+            <div className="react-admin-form-grid">
+              <label className="is-span-2">
+                Producto unidad
+                <select
+                  value={normalizeCigaretteStockLink(form.cigaretteStockLink).unitProductId}
+                  onChange={(event) => updateCigaretteStockLink({ unitProductId: event.target.value, enabled: Boolean(event.target.value && normalizeCigaretteStockLink(form.cigaretteStockLink).box20ProductId) })}
+                >
+                  <option value="">Selecciona unidad</option>
+                  {cigaretteProductOptions.map((product) => (
+                    <option key={`unit-${product.id}`} value={product.code || product.id}>
+                      {product.code || product.id} · {product.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="is-span-2">
+                Producto caja x20
+                <select
+                  value={normalizeCigaretteStockLink(form.cigaretteStockLink).box20ProductId}
+                  onChange={(event) => updateCigaretteStockLink({ box20ProductId: event.target.value, enabled: Boolean(normalizeCigaretteStockLink(form.cigaretteStockLink).unitProductId && event.target.value) })}
+                >
+                  <option value="">Selecciona caja x20</option>
+                  {cigaretteProductOptions.map((product) => (
+                    <option key={`box20-${product.id}`} value={product.code || product.id}>
+                      {product.code || product.id} · {product.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="react-admin-cigarette-link-note is-span-2">
+                <strong>Regla</strong>
+                <span>Si la unidad no alcanza stock, se descuenta 1 caja x20 y se ingresan 20 unidades antes de vender.</span>
+              </div>
+              <div className="react-admin-modal-actions is-span-2">
+                <button
+                  type="button"
+                  className="react-admin-link react-admin-link-soft"
+                  onClick={() => {
+                    updateCigaretteStockLink({ enabled: false, unitProductId: "", box20ProductId: "" });
+                    setCigaretteLinkModal({ open: false });
+                  }}
+                >
+                  Quitar enlace
+                </button>
+                <button
+                  type="button"
+                  className="react-admin-link"
+                  onClick={() => {
+                    const link = normalizeCigaretteStockLink(form.cigaretteStockLink);
+                    updateCigaretteStockLink({ enabled: Boolean(link.unitProductId && link.box20ProductId) });
+                    setCigaretteLinkModal({ open: false });
+                  }}
+                >
+                  Guardar enlace
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       ) : null}

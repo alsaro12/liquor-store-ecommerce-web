@@ -17,22 +17,25 @@ const TABS = [
 ];
 
 const STATUS_BADGES = {
-  PENDIENTE: { label: "Pendiente", tone: "yellow" },
+  PENDIENTE: { label: "Pedido recibido", tone: "yellow" },
+  APROBADO: { label: "Pago aprobado", tone: "yellow" },
   VALIDADO: { label: "Pago aprobado", tone: "yellow" },
   EN_CAMINO: { label: "En camino", tone: "blue" },
   "EN CAMINO": { label: "En camino", tone: "blue" },
-  ENVIADO: { label: "Enviado", tone: "blue" },
+  ENVIADO: { label: "En camino", tone: "blue" },
   ENTREGADO: { label: "Entregado", tone: "green" },
+  FINALIZADO: { label: "Entregado", tone: "green" },
+  CERRADO: { label: "Entregado", tone: "green" },
   COMPLETADO: { label: "Entregado", tone: "green" },
   CANCELADO: { label: "Cancelado", tone: "red" },
-  RECHAZADO: { label: "Rechazado", tone: "red" }
+  RECHAZADO: { label: "Cancelado", tone: "red" }
 };
 
 const TRACK_STEPS = [
-  { key: "PENDIENTE", label: "Pedido" },
-  { key: "VALIDADO", label: "Pago" },
-  { key: "EN_CAMINO", label: "Camino" },
-  { key: "ENTREGADO", label: "Entrega" }
+  { key: "PENDIENTE", label: "Pedido recibido" },
+  { key: "VALIDADO", label: "Pago aprobado" },
+  { key: "EN_CAMINO", label: "En camino" },
+  { key: "ENTREGADO", label: "Entregado" }
 ];
 
 function formatMoney(value) {
@@ -43,9 +46,15 @@ function formatDate(raw) {
   if (!raw) return "";
   const date = new Date(raw);
   if (!Number.isNaN(date.getTime())) {
-    return date.toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" });
+    return date.toLocaleString("es-PE", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
   }
-  return String(raw);
+  return String(raw).replace(/(:\d{2})(?:\.\d+)?(?=\s|$)/, "");
 }
 
 function orderTime(raw) {
@@ -71,7 +80,15 @@ function sortRecentFirst(items) {
 }
 
 function normalizeStatus(status) {
-  return String(status || "PENDIENTE").toUpperCase().replace(/\s+/g, "_");
+  const normalized = String(status || "PENDIENTE").toUpperCase().replace(/\s+/g, "_");
+  const aliases = {
+    APROBADO: "VALIDADO",
+    ENVIADO: "EN_CAMINO",
+    FINALIZADO: "ENTREGADO",
+    CERRADO: "ENTREGADO",
+    COMPLETADO: "ENTREGADO"
+  };
+  return aliases[normalized] || normalized;
 }
 
 function stepState(orderStatus, stepKey) {

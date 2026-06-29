@@ -314,46 +314,29 @@ const PRODUCT_CATEGORY_ALIASES = new Map([
   ["ACCESORIOS", "ACCESORIO"],
   ["OTROS", "OTRO"]
 ]);
-const PRODUCT_CATEGORIES = new Set([
-  "AGUA",
-  "CERVEZA",
-  "CIGARRO",
-  "COCTEL",
-  "ENERGIZANTE",
-  "ESPUMANTE",
-  "GASEOSA",
-  "GIN",
-  "HIELO",
-  "JUGO",
-  "LICOR",
-  "PISCO",
-  "RON",
-  "SNACK",
-  "TEQUILA",
-  "VINO",
-  "VODKA",
-  "WHISKY",
-  "ACCESORIO",
-  "OTRO"
-]);
 const PRODUCT_CATEGORY_LABELS = [
   "Whisky",
   "Ron",
   "Vodka",
-  "Gin",
-  "Tequila",
   "Pisco",
-  "Vinos",
-  "Espumantes",
-  "Cervezas",
+  "Tequila",
+  "Gin",
+  "Vino",
+  "Espumante",
+  "Cerveza",
   "Cigarros",
-  "Cremas y Aperitivos",
-  "Bebidas Preparadas (RTD)",
+  "Anís",
+  "Fernet",
+  "Licores y Cremas",
+  "Aperitivos y Digestivos",
+  "Ready To Drink",
   "Energizantes",
-  "Gaseosas y Mixers",
-  "Aguas",
+  "Gaseosas",
+  "Jugos y Néctares",
+  "Agua",
   "Hielo",
-  "Snacks"
+  "Snacks y Golosinas",
+  "Accesorios y Regalos"
 ];
 const PRODUCT_CATEGORY_LABEL_BY_KEY = new Map(
   PRODUCT_CATEGORY_LABELS.map((label) => [
@@ -374,42 +357,56 @@ for (const [alias, label] of [
   ["VODKAS", "Vodka"],
   ["GINS", "Gin"],
   ["PISCOS", "Pisco"],
-  ["VINO", "Vinos"],
-  ["ESPUMANTE", "Espumantes"],
-  ["ESPUMANTES", "Espumantes"],
-  ["CHAMPAGNE", "Espumantes"],
-  ["ESPUMANTES Y CHAMPAGNE", "Espumantes"],
-  ["CERVEZA", "Cervezas"],
-  ["CERVEZAS", "Cervezas"],
+  ["VINOS", "Vino"],
+  ["ESPUMANTES", "Espumante"],
+  ["CHAMPAGNE", "Espumante"],
+  ["ESPUMANTES Y CHAMPAGNE", "Espumante"],
+  ["CERVEZAS", "Cerveza"],
   ["CIGARRO", "Cigarros"],
-  ["CIGARROS", "Cigarros"],
   ["TABACO", "Cigarros"],
   ["TABACOS", "Cigarros"],
-  ["LICOR", "Cremas y Aperitivos"],
-  ["LICORES", "Cremas y Aperitivos"],
-  ["CREMAS", "Cremas y Aperitivos"],
-  ["APERITIVOS", "Cremas y Aperitivos"],
-  ["LICORES Y CREMAS", "Cremas y Aperitivos"],
-  ["COCTEL", "Bebidas Preparadas (RTD)"],
-  ["COCTELES", "Bebidas Preparadas (RTD)"],
-  ["RTD", "Bebidas Preparadas (RTD)"],
-  ["BEBIDAS PREPARADAS", "Bebidas Preparadas (RTD)"],
-  ["RTD Y BEBIDAS PREPARADAS", "Bebidas Preparadas (RTD)"],
+  ["ANIS", "Anís"],
+  ["LICOR", "Licores y Cremas"],
+  ["LICORES", "Licores y Cremas"],
+  ["CREMAS", "Licores y Cremas"],
+  ["CREMAS Y APERITIVOS", "Licores y Cremas"],
+  ["APERITIVO", "Aperitivos y Digestivos"],
+  ["APERITIVOS", "Aperitivos y Digestivos"],
+  ["DIGESTIVOS", "Aperitivos y Digestivos"],
+  ["COCTEL", "Ready To Drink"],
+  ["COCTELES", "Ready To Drink"],
+  ["RTD", "Ready To Drink"],
+  ["BEBIDAS PREPARADAS", "Ready To Drink"],
+  ["BEBIDAS PREPARADAS RTD", "Ready To Drink"],
+  ["RTD Y BEBIDAS PREPARADAS", "Ready To Drink"],
   ["ENERGIZANTE", "Energizantes"],
-  ["GASEOSA", "Gaseosas y Mixers"],
-  ["GASEOSAS", "Gaseosas y Mixers"],
-  ["MIXERS", "Gaseosas y Mixers"],
-  ["AGUA", "Aguas"],
-  ["AGUAS", "Aguas"],
-  ["AGUAS Y COMPLEMENTOS", "Aguas"],
-  ["COMPLEMENTOS", "Aguas"],
+  ["GASEOSA", "Gaseosas"],
+  ["MIXER", "Gaseosas"],
+  ["MIXERS", "Gaseosas"],
+  ["GASEOSAS Y MIXERS", "Gaseosas"],
+  ["AGUAS", "Agua"],
+  ["AGUAS Y COMPLEMENTOS", "Agua"],
+  ["COMPLEMENTOS", "Agua"],
+  ["JUGO", "Jugos y Néctares"],
+  ["JUGOS", "Jugos y Néctares"],
+  ["NECTAR", "Jugos y Néctares"],
+  ["NECTARES", "Jugos y Néctares"],
+  ["NÉCTARES", "Jugos y Néctares"],
+  ["JUGOS Y NECTARES", "Jugos y Néctares"],
+  ["JUGOS Y NÉCTARES", "Jugos y Néctares"],
   ["HIELOS", "Hielo"],
-  ["SNACK", "Snacks"],
-  ["SNACKS", "Snacks"],
-  ["SNACKS Y PICOTEO", "Snacks"],
-  ["PICOTEO", "Snacks"],
-  ["OTRO", "Cremas y Aperitivos"],
-  ["OTROS", "Cremas y Aperitivos"]
+  ["SNACK", "Snacks y Golosinas"],
+  ["SNACKS", "Snacks y Golosinas"],
+  ["GOLOSINA", "Snacks y Golosinas"],
+  ["GOLOSINAS", "Snacks y Golosinas"],
+  ["SNACKS Y PICOTEO", "Snacks y Golosinas"],
+  ["PICOTEO", "Snacks y Golosinas"],
+  ["ACCESORIO", "Accesorios y Regalos"],
+  ["ACCESORIOS", "Accesorios y Regalos"],
+  ["REGALO", "Accesorios y Regalos"],
+  ["REGALOS", "Accesorios y Regalos"],
+  ["OTRO", "Aperitivos y Digestivos"],
+  ["OTROS", "Aperitivos y Digestivos"]
 ]) {
   PRODUCT_CATEGORY_LABEL_BY_KEY.set(alias, label);
 }
@@ -427,7 +424,7 @@ function normalizeProductCategoryValue(value) {
   const normalized = PRODUCT_CATEGORY_ALIASES.get(clean) || clean || "OTRO";
   const legacyLabel = PRODUCT_CATEGORY_LABEL_BY_KEY.get(normalized);
   if (legacyLabel) return legacyLabel;
-  return PRODUCT_CATEGORIES.has(normalized) ? normalized : "Cremas y Aperitivos";
+  return "Aperitivos y Digestivos";
 }
 
 function normalizeText(value) {
@@ -495,7 +492,7 @@ function applyProductSaleToState(productStateMap, productId, quantity, variantId
 
   const stockBefore = round2(product.stock_actual);
   const cigarettePresentation = resolveCigarettePresentation(product, presentationId);
-  const saleQuantity = cigarettePresentation ? round2(quantity * cigarettePresentation.units) : quantity;
+  const saleQuantity = cigarettePresentation ? round2(quantity * cigaretteAccountingUnits(cigarettePresentation)) : quantity;
   const variantPlan = applyVariantStockSale(product, variantId, saleQuantity);
   const cigaretteRule = getCigaretteAutoOpenRule(product.nombre);
   if (cigarettePresentation || !cigaretteRule?.isUnit) {
@@ -1396,6 +1393,13 @@ function parsePositiveInt(value, label) {
   return parsed;
 }
 
+function parseCartProductId(value) {
+  const direct = toInt(value, 0);
+  if (direct > 0) return direct;
+  const match = String(value ?? "").trim().match(/^\d+/);
+  return match ? toInt(match[0], 0) : 0;
+}
+
 function resolveIncomingProductId(row) {
   if (!row || typeof row !== "object") return 0;
   const directValue =
@@ -1407,13 +1411,13 @@ function resolveIncomingProductId(row) {
     row.id ??
     row.ID ??
     row.n;
-  const directParsed = toInt(directValue, 0);
+  const directParsed = parseCartProductId(directValue);
   if (directParsed > 0) return directParsed;
 
   for (const [key, value] of Object.entries(row)) {
     const compactKey = normalizeText(key).replace(/[^a-z0-9]/g, "");
     if (["n", "na", "no", "nro", "numero", "productid", "productoid", "productoid", "productoid"].includes(compactKey)) {
-      const parsed = toInt(value, 0);
+      const parsed = parseCartProductId(value);
       if (parsed > 0) return parsed;
     }
   }
@@ -1676,9 +1680,9 @@ function normalizeCigarettePresentationId(value) {
 
 function defaultCigarettePresentations(basePrice = 0) {
   return [
-    { id: "unit", label: "Unidad", units: 1, enabled: true, price: round2(basePrice) },
-    { id: "box10", label: "Caja x10", units: 10, enabled: false, price: 0 },
-    { id: "box20", label: "Caja x20", units: 20, enabled: false, price: 0 }
+    { id: "unit", label: "Unidad", units: 1, reportUnits: 1, enabled: true, price: round2(basePrice) },
+    { id: "box10", label: "Caja x10", units: 10, reportUnits: 1, enabled: false, price: 0 },
+    { id: "box20", label: "Caja x20", units: 20, reportUnits: 20, enabled: false, price: 0 }
   ];
 }
 
@@ -1704,11 +1708,21 @@ function normalizeCigarettePresentations(value, basePrice = 0) {
     if (index < 0) continue;
     normalized[index] = {
       ...normalized[index],
-      enabled: id === "unit" ? true : item?.enabled !== false && item?.activo !== false,
+      enabled: item?.enabled !== false && item?.activo !== false,
+      reportUnits: id === "box20" ? 20 : 1,
       price: round2(Math.max(0, toNumber(item?.price ?? item?.precio, normalized[index].price)))
     };
   }
-  return normalized;
+  const activeIndex = normalized.findIndex((item) => item.enabled);
+  return normalized.map((item, index) => ({
+    ...item,
+    enabled: activeIndex < 0 ? item.id === "unit" : index === activeIndex
+  }));
+}
+
+function cigaretteAccountingUnits(presentation) {
+  if (!presentation) return 1;
+  return presentation.id === "box20" ? 20 : 1;
 }
 
 function resolveCigarettePresentation(product, requestedId) {
@@ -1724,7 +1738,7 @@ function resolveCigarettePresentation(product, requestedId) {
     product?.precio ?? product?.PRECIO ?? 0
   );
   const presentation = presentations.find((item) => item.id === id && item.enabled);
-  return presentation || presentations.find((item) => item.id === "unit");
+  return presentation || presentations.find((item) => item.id === "unit" && item.enabled) || null;
 }
 
 function sumVariantStock(value) {
@@ -1739,7 +1753,7 @@ function sumVariantStock(value) {
 function applyVariantStockSale(product, variantId, quantity) {
   const cleanVariantId = trimValue(variantId);
   if (!cleanVariantId) return null;
-  const variants = normalizeProductVariants(product.variantes_json ?? product.VARIANTES ?? product.variants);
+  const variants = normalizeProductVariants(product.variantes_json ?? product.VARIANTES ?? product.variants ?? product.variantes);
   const index = variants.findIndex((variant) => trimValue(variant.id ?? variant.ID_VARIANTE) === cleanVariantId);
   if (index < 0) {
     throw createHttpError(404, `No existe la variante ${cleanVariantId} para ${product.nombre}.`);
@@ -1759,6 +1773,7 @@ function applyVariantStockSale(product, variantId, quantity) {
   variants[index] = { ...variant, stock: variantStockAfter };
   product.variantes_json = JSON.stringify(variants);
   product.VARIANTES = variants;
+  product.variantes = variants;
   return {
     variantId: cleanVariantId,
     variantName: variant.name || cleanVariantId,
@@ -1822,6 +1837,7 @@ function buildProductApiShape(base) {
     PRECIO_COMPRA: round2(Math.max(0, toNumber(base?.PRECIO_COMPRA ?? base?.precio_compra ?? base?.precioCompra, 0))),
     IMAGENES: images,
     CIGARRO_PRESENTACIONES: cigarettePresentations,
+    CIGARRO_STOCK_LINK: normalizeCigaretteStockLink(base?.CIGARRO_STOCK_LINK ?? base?.cigaretteStockLink ?? base?.stockLinkCigarro),
     VARIANTES: variants,
     STOCK_MAXIMO: stockMaximo,
     PEDIDO: stockMaximo,
@@ -2943,8 +2959,12 @@ function orderMatchesCode(order, code) {
   ].some((value) => normalizeOrderLookupCode(value) === target);
 }
 
+function internalOrderCode(order) {
+  return trimValue(order?.id || "");
+}
+
 function publicOrderCode(order) {
-  return trimValue(order?.publicCode || order?.customerCode || order?.id || "");
+  return trimValue(order?.publicCode || order?.customerCode || "");
 }
 
 function buildOrderApiShape(base) {
@@ -2953,9 +2973,15 @@ function buildOrderApiShape(base) {
         id: trimValue(item?.id || ""),
         type: trimValue(item?.type || ""),
         comboId: trimValue(item?.comboId || ""),
-        productId: toInt(item?.productId, 0),
+        productId: parseCartProductId(item?.productId || item?.parentProductId || item?.id),
+        parentProductId: trimValue(item?.parentProductId || ""),
         variantId: trimValue(item?.variantId || ""),
         variantName: trimValue(item?.variantName || ""),
+        presentacionCigarro: trimValue(item?.presentacionCigarro || item?.cigarettePresentation || item?.PRESENTACION_CIGARRO || ""),
+        cigarettePresentation: trimValue(item?.cigarettePresentation || item?.presentacionCigarro || item?.PRESENTACION_CIGARRO || ""),
+        cigarettePresentationLabel: trimValue(item?.cigarettePresentationLabel || item?.PRESENTACION_CIGARRO_LABEL || ""),
+        cigarettePresentationUnits: Math.max(0, toInt(item?.cigarettePresentationUnits ?? item?.PRESENTACION_UNIDADES, 0)),
+        cigarettePresentationReportUnits: Math.max(0, toInt(item?.cigarettePresentationReportUnits ?? item?.PRESENTACION_UNIDADES_REPORTE, 0)),
         name: trimValue(item?.name || ""),
         category: trimValue(item?.category || ""),
         price: round2(item?.price),
@@ -3049,6 +3075,7 @@ function buildOrderApiShape(base) {
     reason: trimValue(base?.reason || base?.statusReason || ""),
     statusReason: trimValue(base?.statusReason || base?.reason || ""),
     notes: trimValue(base?.notes || ""),
+    inventoryDispatchedAt: trimValue(base?.inventoryDispatchedAt || ""),
     lastUpdatedAt: trimValue(base?.lastUpdatedAt || base?.createdAt || nowIso())
   };
 }
@@ -3273,6 +3300,24 @@ function buildOrderStatusNotification(order, previousStatus, nextStatus) {
   };
 }
 
+function orderInventoryReference(order) {
+  return `PEDIDO:${internalOrderCode(order) || publicOrderCode(order) || ""}`.trim();
+}
+
+async function hasOrderInventoryMovement(order) {
+  const reference = orderInventoryReference(order);
+  if (!reference || reference === "PEDIDO:") return false;
+  const expectedCount = orderInventoryItems(order).length;
+  if (expectedCount <= 0) return false;
+  const items = await readKardexAll();
+  const movementCount = items.filter((item) => {
+    const ref = trimValue(item?.REFERENCIA || item?.referencia || "");
+    const note = trimValue(item?.NOTA || item?.nota || "");
+    return ref === reference || note.includes(reference);
+  }).length;
+  return movementCount >= expectedCount;
+}
+
 async function updateOrder(orderId, payload) {
   const current = await readOrdersStore();
   const index = current.findIndex((item) => trimValue(item?.id || "") === trimValue(orderId || ""));
@@ -3316,18 +3361,85 @@ async function updateOrder(orderId, payload) {
     deliveryCost,
     deliveryFinanceNote,
     deliveryFinanceAt,
+    inventoryDispatchedAt: existing.inventoryDispatchedAt,
     lastUpdatedAt: nowIso()
   });
 
-  current[index] = next;
+  let nextOrder = next;
+  const shouldReachInventoryExit = ["EN_CAMINO", "ENTREGADO"].includes(next.status);
+  const statusEnteredDispatchStage = previousStatus !== next.status && shouldReachInventoryExit;
+  const alreadyHasInventoryMovement = shouldReachInventoryExit ? await hasOrderInventoryMovement(next) : false;
+  const shouldDispatchInventory = shouldReachInventoryExit && statusEnteredDispatchStage && !alreadyHasInventoryMovement;
+  if (shouldDispatchInventory) {
+    await dispatchOrderInventory(next);
+    nextOrder = buildOrderApiShape({
+      ...next,
+      inventoryDispatchedAt: nowIso(),
+      lastUpdatedAt: nowIso()
+    });
+  }
+
+  current[index] = nextOrder;
   await writeOrdersStore(current);
-  const notification = buildOrderStatusNotification(next, previousStatus, next.status);
+  const notification = buildOrderStatusNotification(nextOrder, previousStatus, nextOrder.status);
   if (notification) {
     try {
-      await addNotificacion(next.usuarioId, notification);
+      await addNotificacion(nextOrder.usuarioId, notification);
     } catch (_) { /* no bloquea el cambio de estado */ }
   }
-  return next;
+  return nextOrder;
+}
+
+function orderInventoryItems(order) {
+  const rows = [];
+  for (const item of Array.isArray(order?.items) ? order.items : []) {
+    const itemQuantity = Math.max(1, toInt(item?.quantity, 1));
+    if (item?.type === "combo" && Array.isArray(item.items)) {
+      for (const line of item.items) {
+        const productId = parseCartProductId(line?.productId || line?.parentProductId || line?.id);
+        if (productId <= 0) continue;
+        rows.push({
+          productId,
+          variantId: trimValue(line?.variantId || ""),
+          cantidad: Math.max(1, toInt(line?.quantity, 1)) * itemQuantity,
+          presentacionCigarro: trimValue(line?.presentacionCigarro || line?.cigarettePresentation || "")
+        });
+      }
+      continue;
+    }
+    const productId = parseCartProductId(item?.productId || item?.parentProductId || item?.id);
+    if (productId <= 0) continue;
+    rows.push({
+      productId,
+      variantId: trimValue(item?.variantId || ""),
+      cantidad: itemQuantity,
+      presentacionCigarro: trimValue(item?.presentacionCigarro || item?.cigarettePresentation || "")
+    });
+  }
+  return rows;
+}
+
+async function dispatchOrderInventory(order) {
+  const items = orderInventoryItems(order);
+  if (!items.length) return null;
+  const reference = orderInventoryReference(order);
+  const customerReference = publicOrderCode(order);
+  try {
+    return await registerSaleBatchFirebase({
+      items,
+      fechaVenta: defaultSaleDateTime(),
+      tipoPago: "Pedido web",
+      origen: reference,
+      referencia: reference,
+      nota: `Salida automatica ${reference}${customerReference ? ` | Codigo cliente ${customerReference}` : ""}`.trim()
+    });
+  } catch (error) {
+    if (error?.status) throw error;
+    throw createHttpError(
+      503,
+      `No se pudo descontar inventario en Firebase para ${internalOrderCode(order) || publicOrderCode(order) || "el pedido"}. ${buildDbErrorMessage(error)}`
+    );
+  }
 }
 
 function resolveStaticFilePath(rootDir, requestPath) {
@@ -3518,11 +3630,25 @@ function firebaseProductToApi(row) {
     PRECIO_COMPRA: row?.precioCompra,
     IMAGENES: row?.imagenes,
     CIGARRO_PRESENTACIONES: row?.presentacionesCigarro,
+    CIGARRO_STOCK_LINK: row?.cigaretteStockLink,
     VARIANTES: row?.variantes,
     STOCK_MAXIMO: row?.stockMaximo,
     STOCK_MINIMO: row?.stockMinimo,
     STOCK_ACTUAL: row?.stockActual,
     ESTADO: row?.estado
+  });
+}
+
+function normalizeCigaretteStockLink(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const unitProductId = trimValue(source.unitProductId ?? source.unit_product_id ?? "");
+  const box20ProductId = trimValue(source.box20ProductId ?? source.box20_product_id ?? "");
+  const enabled = source.enabled === true && unitProductId && box20ProductId && unitProductId !== box20ProductId;
+  return cleanForFirestore({
+    enabled: Boolean(enabled),
+    unitProductId,
+    box20ProductId,
+    unitsPerBox: 20
   });
 }
 
@@ -3563,6 +3689,12 @@ function buildFirebaseProductDoc(payload, existing = {}) {
         payload?.presentacionesCigarro ??
         existing?.presentacionesCigarro,
       price
+    ),
+    cigaretteStockLink: normalizeCigaretteStockLink(
+      payload?.CIGARRO_STOCK_LINK ??
+        payload?.cigaretteStockLink ??
+        payload?.stockLinkCigarro ??
+        existing?.cigaretteStockLink
     ),
     variantes: variants,
     stockMaximo: parseNonNegativeInteger(payload?.STOCK_MAXIMO ?? payload?.stock_maximo ?? payload?.stockMaximo ?? payload?.PEDIDO ?? payload?.pedido ?? existing?.stockMaximo ?? 0, "STOCK_MAXIMO"),
@@ -7637,12 +7769,25 @@ async function nextFirebaseSaleAndKardexIds(transaction, db) {
   return { saleNumber, movementNumber };
 }
 
+async function nextFirebaseSaleAndKardexIdsBlock(transaction, db, movementCount = 1) {
+  const ref = db.collection(firebaseCollectionName("settings")).doc("counters");
+  const snap = await transaction.get(ref);
+  const data = snap.exists ? snap.data() : {};
+  const saleNumber = toInt(data?.salesNext, 0) + 1;
+  const firstMovementNumber = toInt(data?.kardexNext, 0) + 1;
+  transaction.set(ref, {
+    salesNext: saleNumber,
+    kardexNext: firstMovementNumber + Math.max(1, toInt(movementCount, 1)) - 1,
+    updatedAt: nowIso()
+  }, { merge: true });
+  return { saleNumber, firstMovementNumber };
+}
+
 async function registerSaleFirebase(payload) {
   const db = getFirebaseDb();
   if (!db) return null;
   const productId = parsePositiveInt(resolveIncomingProductId(payload), "producto");
   const variantId = trimValue(payload.variantId ?? payload.variant_id ?? "");
-  if (variantId) return null;
   const quantity = parseNonNegativeNumber(payload.cantidad ?? payload.CANTIDAD, "cantidad");
   if (quantity <= 0) throw createHttpError(400, "La cantidad de venta debe ser mayor a 0.");
   const requestedPresentationId = payload.presentacionCigarro ?? payload.cigarettePresentation ?? payload.PRESENTACION_CIGARRO ?? "";
@@ -7656,6 +7801,8 @@ async function registerSaleFirebase(payload) {
     payload.tipoPagoDetalle || payload.TIPO_PAGO_DETALLE || buildPaymentSummaryText(paymentSplit, tipoPago)
   );
   const origin = normalizeSaleOrigin(payload.tipoVenta ?? payload.origen ?? payload.ORIGEN);
+  const movementReference = trimValue(payload.referencia ?? payload.REFERENCIA ?? origin) || "VENTA";
+  const movementNote = trimValue(payload.nota ?? payload.NOTA ?? "");
 
   return db.runTransaction(async (transaction) => {
     const productEntry = await findFirebaseProductByLegacyId(productId);
@@ -7663,15 +7810,55 @@ async function registerSaleFirebase(payload) {
     const productSnap = await transaction.get(productEntry.ref);
     const product = productSnap.data() || productEntry.data;
     const cigarettePresentation = resolveCigarettePresentation(product, requestedPresentationId);
-    const reportQuantity = cigarettePresentation ? round2(quantity * cigarettePresentation.units) : quantity;
-    const stockBefore = round2(product.stockActual ?? product.STOCK_ACTUAL ?? 0);
+    const reportQuantity = cigarettePresentation ? round2(quantity * cigaretteAccountingUnits(cigarettePresentation)) : quantity;
+    const originalStockBefore = round2(product.stockActual ?? product.STOCK_ACTUAL ?? 0);
+    let stockBefore = originalStockBefore;
+    let autoOpenPlan = null;
+    if (cigarettePresentation?.id === "unit" && stockBefore < reportQuantity) {
+      const stockLink = normalizeCigaretteStockLink(product.cigaretteStockLink);
+      if (stockLink.enabled && parseCartProductId(stockLink.unitProductId) === productId) {
+        const boxProductId = parseCartProductId(stockLink.box20ProductId);
+        const boxEntry = await findFirebaseProductByLegacyId(boxProductId);
+        if (!boxEntry) throw createHttpError(404, `No existe la caja x20 enlazada N° ${boxProductId}.`);
+        const boxSnap = await transaction.get(boxEntry.ref);
+        const boxProduct = boxSnap.data() || boxEntry.data;
+        const unitsPerBox = 20;
+        const unitsNeeded = round2(reportQuantity - stockBefore);
+        const boxesToOpen = Math.ceil(unitsNeeded / unitsPerBox);
+        const boxStockBefore = round2(boxProduct.stockActual ?? boxProduct.STOCK_ACTUAL ?? 0);
+        if (boxStockBefore < boxesToOpen) {
+          throw createHttpError(
+            409,
+            `Stock insuficiente para ${product.nombre || product.NOMBRE || productId}. Caja x20 enlazada disponible: ${boxStockBefore}, requerida: ${boxesToOpen}.`
+          );
+        }
+        const openedUnits = boxesToOpen * unitsPerBox;
+        autoOpenPlan = {
+          boxEntry,
+          boxProduct,
+          boxProductId,
+          boxName: boxProduct.nombre || boxProduct.NOMBRE || `Producto ${boxProductId}`,
+          boxesToOpen,
+          boxStockBefore,
+          boxStockAfter: round2(boxStockBefore - boxesToOpen),
+          unitsPerBox,
+          openedUnits,
+          unitStockBefore: stockBefore,
+          unitStockAfterOpen: round2(stockBefore + openedUnits)
+        };
+        stockBefore = autoOpenPlan.unitStockAfterOpen;
+      }
+    }
     if (stockBefore < reportQuantity) throw createHttpError(409, `Stock insuficiente para ${product.nombre || product.NOMBRE || productId}.`);
+    const variantPlan = applyVariantStockSale(product, variantId, reportQuantity);
     const basePrice = round2(product.precio ?? product.PRECIO ?? 0);
     const total = cigarettePresentation
       ? round2(round2(cigarettePresentation.price || basePrice) * quantity)
       : round2(basePrice * quantity);
     const price = reportQuantity > 0 ? round2(total / reportQuantity) : basePrice;
-    const { saleNumber, movementNumber } = await nextFirebaseSaleAndKardexIds(transaction, db);
+    const movementCount = autoOpenPlan ? 3 : 1;
+    const { saleNumber, firstMovementNumber } = await nextFirebaseSaleAndKardexIdsBlock(transaction, db, movementCount);
+    let movementNumber = firstMovementNumber;
     const saleApi = csvSaleToApi({
       ID_VENTA: saleNumber,
       FECHA_VENTA: fechaVenta,
@@ -7686,20 +7873,85 @@ async function registerSaleFirebase(payload) {
       ORIGEN: origin,
       ESTADO: "ACTIVA"
     });
+    if (variantPlan) {
+      saleApi.ID_VARIANTE = variantPlan.variantId;
+      saleApi.VARIANTE = variantPlan.variantName;
+    }
     const saleDoc = {
       ...saleApi,
       id: `venta-${saleNumber}`,
       legacyId: String(saleNumber),
       productLegacyId: String(productId),
       productDocId: productEntry.ref.id,
+      variantId: variantPlan?.variantId || "",
+      variantName: variantPlan?.variantName || "",
       createdAt: nowIso(),
       migratedAt: ""
     };
     if (cigarettePresentation) {
       saleDoc.PRESENTACION_CIGARRO = cigarettePresentation.label;
       saleDoc.PRESENTACION_UNIDADES = cigarettePresentation.units;
+      saleDoc.PRESENTACION_UNIDADES_REPORTE = cigaretteAccountingUnits(cigarettePresentation);
       saleDoc.CANTIDAD_PRESENTACION = quantity;
     }
+    const movementDocs = [];
+    const movementApis = [];
+    if (autoOpenPlan) {
+      const boxMovementApi = csvKardexToApi({
+        ID_MOV: movementNumber,
+        FECHA_HORA: saleLocalDateTimeToStoredUtc(fechaVenta),
+        ID_VENTA: saleNumber,
+        "N°": autoOpenPlan.boxProductId,
+        NOMBRE: autoOpenPlan.boxName,
+        TIPO: "SALIDA",
+        CANTIDAD: autoOpenPlan.boxesToOpen,
+        STOCK_ANTES: autoOpenPlan.boxStockBefore,
+        STOCK_DESPUES: autoOpenPlan.boxStockAfter,
+        REFERENCIA: "APERTURA_CAJA_X20",
+        NOTA: `Apertura automatica para ${product.nombre || product.NOMBRE || productId} | ${movementReference}`
+      });
+      movementDocs.push({
+        ...boxMovementApi,
+        id: `kardex-${movementNumber}`,
+        legacyId: String(movementNumber),
+        productLegacyId: String(autoOpenPlan.boxProductId),
+        productDocId: autoOpenPlan.boxEntry.ref.id,
+        saleLegacyId: String(saleNumber),
+        saleDocId: `venta-${saleNumber}`,
+        createdAt: nowIso(),
+        migratedAt: ""
+      });
+      movementApis.push(boxMovementApi);
+      movementNumber += 1;
+
+      const unitIngressApi = csvKardexToApi({
+        ID_MOV: movementNumber,
+        FECHA_HORA: saleLocalDateTimeToStoredUtc(fechaVenta),
+        ID_VENTA: saleNumber,
+        "N°": productId,
+        NOMBRE: product.nombre || product.NOMBRE || "",
+        TIPO: "INGRESO",
+        CANTIDAD: autoOpenPlan.openedUnits,
+        STOCK_ANTES: autoOpenPlan.unitStockBefore,
+        STOCK_DESPUES: autoOpenPlan.unitStockAfterOpen,
+        REFERENCIA: "APERTURA_CAJA_X20",
+        NOTA: `Ingreso automatico desde ${autoOpenPlan.boxName} | ${movementReference}`
+      });
+      movementDocs.push({
+        ...unitIngressApi,
+        id: `kardex-${movementNumber}`,
+        legacyId: String(movementNumber),
+        productLegacyId: String(productId),
+        productDocId: productEntry.ref.id,
+        saleLegacyId: String(saleNumber),
+        saleDocId: `venta-${saleNumber}`,
+        createdAt: nowIso(),
+        migratedAt: ""
+      });
+      movementApis.push(unitIngressApi);
+      movementNumber += 1;
+    }
+
     const movementApi = csvKardexToApi({
       ID_MOV: movementNumber,
       FECHA_HORA: saleLocalDateTimeToStoredUtc(fechaVenta),
@@ -7710,8 +7962,11 @@ async function registerSaleFirebase(payload) {
       CANTIDAD: reportQuantity,
       STOCK_ANTES: stockBefore,
       STOCK_DESPUES: round2(stockBefore - reportQuantity),
-      REFERENCIA: "VENTA",
-      NOTA: `Venta #${saleNumber}`
+      REFERENCIA: movementReference,
+      NOTA: [
+        variantPlan ? `Venta #${saleNumber} - ${variantPlan.variantName}` : `Venta #${saleNumber}`,
+        movementNote
+      ].filter(Boolean).join(" | ")
     });
     const movementDoc = {
       ...movementApi,
@@ -7721,19 +7976,34 @@ async function registerSaleFirebase(payload) {
       productDocId: productEntry.ref.id,
       saleLegacyId: String(saleNumber),
       saleDocId: saleDoc.id,
+      variantId: variantPlan?.variantId || "",
+      variantName: variantPlan?.variantName || "",
       createdAt: nowIso(),
       migratedAt: ""
     };
-    transaction.update(productEntry.ref, {
+    movementDocs.push(movementDoc);
+    movementApis.push(movementApi);
+    const productPatch = {
       stockActual: round2(stockBefore - reportQuantity),
       updatedAt: nowIso()
-    });
+    };
+    if (variantPlan) productPatch.variantes = variantPlan.variants;
+    if (autoOpenPlan) {
+      transaction.update(autoOpenPlan.boxEntry.ref, {
+        stockActual: autoOpenPlan.boxStockAfter,
+        updatedAt: nowIso()
+      });
+    }
+    transaction.update(productEntry.ref, productPatch);
     transaction.set(db.collection(firebaseCollectionName("sales")).doc(saleDoc.id), cleanForFirestore(saleDoc), { merge: true });
-    transaction.set(db.collection(firebaseCollectionName("kardex")).doc(movementDoc.id), cleanForFirestore(movementDoc), { merge: true });
+    for (const doc of movementDocs) {
+      transaction.set(db.collection(firebaseCollectionName("kardex")).doc(doc.id), cleanForFirestore(doc), { merge: true });
+    }
     return {
       sale: saleApi,
       product: firebaseProductToApi({ ...product, stockActual: round2(stockBefore - reportQuantity) }),
-      movement: movementApi
+      movement: movementApi,
+      movements: movementApis
     };
   });
 }
@@ -7742,6 +8012,7 @@ async function registerSaleBatchFirebase(payload) {
   const rawItems = Array.isArray(payload?.items) ? payload.items : [];
   if (!rawItems.length) throw createHttpError(400, "Debes enviar al menos un producto en items.");
   const sales = [];
+  const movements = [];
   const productsUpdated = [];
   let total = 0;
   for (const item of rawItems) {
@@ -7751,13 +8022,20 @@ async function registerSaleBatchFirebase(payload) {
       tipoPago: payload.tipoPago,
       tipoPagoDetalle: payload.tipoPagoDetalle,
       paymentSplit: payload.paymentSplit,
-      tipoVenta: payload.tipoVenta ?? payload.origen
+      tipoVenta: payload.tipoVenta ?? payload.origen,
+      referencia: payload.referencia,
+      nota: payload.nota
     });
     sales.push(result.sale);
+    if (Array.isArray(result.movements) && result.movements.length) {
+      movements.push(...result.movements);
+    } else {
+      movements.push(result.movement);
+    }
     productsUpdated.push(result.product);
     total = round2(total + result.sale.TOTAL);
   }
-  return { sales, productsUpdated, movements: [], total };
+  return { sales, productsUpdated, movements, total };
 }
 
 async function readKardexAll() {
@@ -8735,11 +9013,12 @@ async function registerSaleBatch(payload) {
       for (const row of rawItems) {
         const productId = parsePositiveInt(resolveIncomingProductId(row), "producto");
         const variantId = trimValue(row?.variantId ?? row?.variant_id ?? "");
+        const presentationId = trimValue(row?.presentacionCigarro ?? row?.cigarettePresentation ?? row?.PRESENTACION_CIGARRO ?? "");
         const quantity = parseNonNegativeNumber(row?.cantidad ?? row?.CANTIDAD, "cantidad");
         if (quantity <= 0) throw createHttpError(400, "La cantidad de venta debe ser mayor a 0.");
-        const key = `${productId}::${variantId}`;
-        const prev = aggregated.get(key) || { productId, variantId, cantidad: 0 };
-        aggregated.set(key, { productId, variantId, cantidad: round2(prev.cantidad + quantity) });
+        const key = `${productId}::${variantId}::${presentationId}`;
+        const prev = aggregated.get(key) || { productId, variantId, presentationId, cantidad: 0 };
+        aggregated.set(key, { productId, variantId, presentationId, cantidad: round2(prev.cantidad + quantity) });
       }
       const items = Array.from(aggregated.values());
 
@@ -8751,7 +9030,7 @@ async function registerSaleBatch(payload) {
         for (const item of items) {
           products.push({
             item,
-            ...applyProductSaleToState(stateMap, item.productId, item.cantidad, item.variantId)
+            ...applyProductSaleToState(stateMap, item.productId, item.cantidad, item.variantId, item.presentationId)
           });
         }
 

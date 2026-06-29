@@ -221,10 +221,16 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
         },
         pickupDate: "",
         items: items.map((it) => ({
-          productId: Number(it.productId || it.parentProductId || it.id) || 0,
+          productId: it.productId || it.parentProductId || it.id || "",
           id: it.id,
+          parentProductId: it.parentProductId || "",
           variantId: it.variantId || "",
           variantName: it.variantName || "",
+          presentacionCigarro: it.cigarettePresentation || it.presentacionCigarro || "",
+          cigarettePresentation: it.cigarettePresentation || it.presentacionCigarro || "",
+          cigarettePresentationLabel: it.cigarettePresentationLabel || "",
+          cigarettePresentationUnits: it.cigarettePresentationUnits || 0,
+          cigarettePresentationReportUnits: it.cigarettePresentationReportUnits || 0,
           type: it.type || "product",
           comboId: it.comboId || null,
           name: it.name,
@@ -257,7 +263,7 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
       };
       const order = await createOrder(payload);
       const orderId = String(order?.id || "");
-      const orderCode = String(order?.publicCode || order?.customerCode || order?.id || "");
+      const orderCode = String(order?.publicCode || order?.customerCode || "");
       if (!orderId) throw new Error("El servidor no devolvió número de pedido.");
       const detailUrl = getOrderDetailUrl(orderCode || orderId);
       const orderDetail = {
