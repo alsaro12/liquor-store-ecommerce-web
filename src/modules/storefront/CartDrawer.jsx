@@ -28,7 +28,7 @@ export default function CartDrawer({
   function applyPromo(event) {
     event.preventDefault();
     if (!promoCode.trim()) return;
-    setPromoMsg("Código no válido por ahora. Pronto disponible.");
+    setPromoMsg("El cupón se valida al finalizar y descuenta solo el delivery.");
   }
 
   function toggleComboDetail(id) {

@@ -328,3 +328,16 @@ export async function quoteDelivery({ latitud, longitud }) {
   }
   return payload;
 }
+
+export async function validateDeliveryCoupon({ code, shipping }) {
+  const response = await fetch(`${API_BASE_URL}/api/coupons/validate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code, shipping })
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(payload?.error || payload?.message || "Cupón no disponible.");
+  }
+  return payload;
+}

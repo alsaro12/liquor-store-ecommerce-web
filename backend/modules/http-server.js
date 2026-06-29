@@ -3011,6 +3011,21 @@ function buildOrderApiShape(base) {
     ? Math.max(0, round2(Number(base.total) - subtotal - serviceFee))
     : 0;
   const shipping = hasStoredShipping ? round2(base.shipping) : inferredShipping;
+  const deliveryDiscount = Math.max(0, round2(base?.deliveryDiscount ?? base?.coupon?.deliveryDiscount ?? 0));
+  const shippingBeforeDiscount = Number.isFinite(Number(base?.shippingBeforeDiscount))
+    ? Math.max(0, round2(base.shippingBeforeDiscount))
+    : round2(shipping + deliveryDiscount);
+  const coupon = base?.coupon && typeof base.coupon === "object"
+    ? {
+        id: trimValue(base.coupon.id || ""),
+        code: normalizeCouponCode(base.coupon.code || ""),
+        title: trimValue(base.coupon.title || ""),
+        appliesTo: "delivery",
+        discountType: normalizeCouponDiscountType(base.coupon.discountType),
+        discountValue: round2(base.coupon.discountValue || 0),
+        deliveryDiscount
+      }
+    : null;
   const hasDeliveryCost = base?.deliveryCost !== null
     && base?.deliveryCost !== undefined
     && String(base.deliveryCost).trim() !== ""
@@ -3053,6 +3068,9 @@ function buildOrderApiShape(base) {
     items,
     subtotal,
     shipping,
+    shippingBeforeDiscount,
+    deliveryDiscount,
+    coupon,
     serviceFee,
     serviceFeeRate: ORDER_SERVICE_FEE_RATE,
     deliveryDistanceKm: base?.deliveryDistanceKm === null || base?.deliveryDistanceKm === undefined
@@ -3135,6 +3153,9 @@ function buildPublicOrderShape(order) {
       : [],
     subtotal: safe.subtotal,
     shipping: safe.shipping,
+    shippingBeforeDiscount: safe.shippingBeforeDiscount,
+    deliveryDiscount: safe.deliveryDiscount,
+    coupon: safe.coupon,
     serviceFee: safe.serviceFee,
     total: safe.total,
     reason: safe.reason,
@@ -3207,6 +3228,13 @@ async function createOrder(payload, options = {}) {
     storeLatitud = deliveryConfig.store.latitud;
     storeLongitud = deliveryConfig.store.longitud;
   }
+  const shippingBeforeDiscount = shipping;
+  const couponCode = normalizeCouponCode(payload?.coupon?.code || payload?.couponCode || payload?.codigoCupon || "");
+  const coupon = couponCode
+    ? await validateCouponForDelivery(couponCode, { shipping: shippingBeforeDiscount })
+    : null;
+  const deliveryDiscount = coupon ? coupon.deliveryDiscount : 0;
+  shipping = round2(Math.max(0, shippingBeforeDiscount - deliveryDiscount));
   const serviceFee = roundFeeFavorCustomer(subtotal * ORDER_SERVICE_FEE_RATE);
   const computedTotal = round2(subtotal + shipping + serviceFee);
 
@@ -3236,6 +3264,9 @@ async function createOrder(payload, options = {}) {
     items,
     subtotal,
     shipping,
+    shippingBeforeDiscount,
+    deliveryDiscount,
+    coupon,
     serviceFee,
     serviceFeeRate: ORDER_SERVICE_FEE_RATE,
     deliveryDistanceKm,
@@ -3254,6 +3285,7 @@ async function createOrder(payload, options = {}) {
     lastUpdatedAt: nowIso()
   });
 
+  if (coupon) await consumeCouponUse(coupon.id);
   current.unshift(order);
   await writeOrdersStore(current);
 
@@ -6791,6 +6823,7 @@ function buildCouponApiShape(row = {}) {
     title: trimValue(row.title || row.titulo || "").slice(0, 120),
     code,
     description: trimValue(row.description || row.descripcion || "").slice(0, 240),
+    appliesTo: "delivery",
     discountType,
     discountValue,
     unlimitedDates,
@@ -6808,13 +6841,74 @@ function buildCouponApiShape(row = {}) {
 function assertCouponInput(coupon) {
   if (!coupon.title) throw createHttpError(400, "El cupón necesita un título.");
   if (!coupon.code) throw createHttpError(400, "El cupón necesita un código.");
-  if (coupon.discountValue <= 0) throw createHttpError(400, "El descuento debe ser mayor a 0.");
+  if (coupon.discountValue <= 0) throw createHttpError(400, "El descuento de delivery debe ser mayor a 0.");
   if (!coupon.unlimitedDates && coupon.startsAt && coupon.endsAt && new Date(coupon.startsAt).getTime() > new Date(coupon.endsAt).getTime()) {
     throw createHttpError(400, "La fecha inicial no puede ser mayor que la fecha final.");
   }
   if (!coupon.unlimitedUses && (!Number.isFinite(Number(coupon.maxUses)) || Number(coupon.maxUses) <= 0)) {
     throw createHttpError(400, "Define unidades disponibles o marca usos ilimitados.");
   }
+}
+
+function isCouponCurrentlyValid(coupon, now = new Date()) {
+  if (!coupon || coupon.status !== "ACTIVO") return false;
+  const nowMs = now.getTime();
+  if (!coupon.unlimitedDates) {
+    if (coupon.startsAt && new Date(coupon.startsAt).getTime() > nowMs) return false;
+    if (coupon.endsAt && new Date(coupon.endsAt).getTime() < nowMs) return false;
+  }
+  if (!coupon.unlimitedUses && Number(coupon.usedCount || 0) >= Number(coupon.maxUses || 0)) return false;
+  return true;
+}
+
+function calculateDeliveryCouponDiscount(coupon, shippingInput) {
+  const shipping = Math.max(0, round2(shippingInput));
+  if (!shipping) return 0;
+  const rawDiscount = coupon.discountType === "percent"
+    ? round2(shipping * Number(coupon.discountValue || 0) / 100)
+    : round2(coupon.discountValue);
+  return Math.min(shipping, Math.max(0, round2(rawDiscount)));
+}
+
+async function validateCouponForDelivery(codeInput, { shipping = 0 } = {}) {
+  const code = normalizeCouponCode(codeInput || "");
+  if (!code) throw createHttpError(400, "Ingresa un código de cupón.");
+  const coupons = await listCouponsAll();
+  const coupon = coupons.find((item) => item.code === code);
+  if (!coupon || !isCouponCurrentlyValid(coupon)) {
+    throw createHttpError(404, "Cupón no disponible.");
+  }
+  const shippingBeforeDiscount = Math.max(0, round2(shipping));
+  const deliveryDiscount = calculateDeliveryCouponDiscount(coupon, shippingBeforeDiscount);
+  return {
+    id: coupon.id,
+    code: coupon.code,
+    title: coupon.title,
+    description: coupon.description,
+    appliesTo: "delivery",
+    discountType: coupon.discountType,
+    discountValue: coupon.discountValue,
+    deliveryDiscount,
+    shippingBeforeDiscount,
+    shippingAfterDiscount: round2(Math.max(0, shippingBeforeDiscount - deliveryDiscount))
+  };
+}
+
+async function consumeCouponUse(couponId) {
+  const safeId = trimValue(couponId || "");
+  if (!safeId) return;
+  const existing = await getFirebaseDoc("coupons", safeId);
+  if (!existing) return;
+  const coupon = buildCouponApiShape(existing);
+  if (coupon.unlimitedUses) return;
+  if (!isCouponCurrentlyValid(coupon)) {
+    throw createHttpError(409, "Cupón sin unidades disponibles.");
+  }
+  await writeFirebaseDoc("coupons", safeId, {
+    ...existing,
+    usedCount: Number(coupon.usedCount || 0) + 1,
+    updatedAt: nowIso()
+  });
 }
 
 async function listCouponsAll() {
@@ -11051,6 +11145,7 @@ const API_OBJECT_ROUTE_HANDLERS = [
     listCouponsAll,
     saveCoupon,
     deleteCoupon,
+    validateCouponForDelivery,
     requireStaff
   }),
   createMetodosPagoObjectServer({

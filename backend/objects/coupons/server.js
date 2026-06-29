@@ -3,7 +3,16 @@ function matchesPath(pathname, basePath) {
 }
 
 function createCouponsObjectServer(deps) {
-  const { sendText, sendJson, parseJsonBody, listCouponsAll, saveCoupon, deleteCoupon, requireStaff } = deps;
+  const {
+    sendText,
+    sendJson,
+    parseJsonBody,
+    listCouponsAll,
+    saveCoupon,
+    deleteCoupon,
+    validateCouponForDelivery,
+    requireStaff
+  } = deps;
 
   return async function handleCouponsRoute(req, res, pathname) {
     if (matchesPath(pathname, "/api/coupons")) {
@@ -19,6 +28,18 @@ function createCouponsObjectServer(deps) {
         return true;
       }
       sendText(res, 405, "Metodo no permitido.");
+      return true;
+    }
+
+    if (matchesPath(pathname, "/api/coupons/validate")) {
+      if (req.method !== "POST") {
+        sendText(res, 405, "Metodo no permitido.");
+        return true;
+      }
+      const payload = await parseJsonBody(req);
+      sendJson(res, 200, await validateCouponForDelivery(payload?.code || payload?.codigo, {
+        shipping: payload?.shipping ?? payload?.delivery ?? payload?.deliveryPrice
+      }));
       return true;
     }
 

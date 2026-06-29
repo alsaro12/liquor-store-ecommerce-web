@@ -105,6 +105,7 @@ export default function AdminCouponsPage() {
     try {
       const payload = {
         ...form,
+        appliesTo: "delivery",
         discountValue: Number(String(form.discountValue || "0").replace(",", ".")),
         maxUses: form.unlimitedUses ? null : Number(form.maxUses || 0),
         startsAt: form.unlimitedDates || !form.startsAt ? "" : `${form.startsAt}T00:00:00-05:00`,
@@ -142,7 +143,7 @@ export default function AdminCouponsPage() {
           <div>
             <span>Cupones</span>
             <h2>{editingId ? "Editar cupón" : "Crear cupón"}</h2>
-            <small>Códigos de descuento con vigencia, unidades disponibles y estado operativo.</small>
+            <small>Códigos de descuento aplicados solo al delivery, con vigencia, unidades disponibles y estado operativo.</small>
           </div>
           <button type="button" className="react-admin-link" onClick={resetForm}>
             Nuevo cupón
@@ -169,14 +170,14 @@ export default function AdminCouponsPage() {
           </label>
 
           <label>
-            <span>Tipo de descuento</span>
+            <span>Tipo de descuento delivery</span>
             <select value={form.discountType} onChange={(event) => updateForm("discountType", event.target.value)}>
               <option value="amount">Monto en soles</option>
               <option value="percent">Porcentaje</option>
             </select>
           </label>
           <label>
-            <span>Valor</span>
+            <span>Valor sobre delivery</span>
             <input type="number" min="0" step="0.01" value={form.discountValue} onChange={(event) => updateForm("discountValue", event.target.value)} required />
           </label>
           <label className="admin-coupons-check">
@@ -237,6 +238,7 @@ export default function AdminCouponsPage() {
               <th>Código</th>
               <th>Título</th>
               <th>Descuento</th>
+              <th>Aplica a</th>
               <th>Vigencia</th>
               <th>Usos</th>
               <th>Estado</th>
@@ -249,6 +251,7 @@ export default function AdminCouponsPage() {
                 <td><strong>{coupon.code}</strong></td>
                 <td>{coupon.title}</td>
                 <td>{couponDiscountLabel(coupon)}</td>
+                <td>Delivery</td>
                 <td>{coupon.unlimitedDates ? "Ilimitada" : `${formatDate(coupon.startsAt)} - ${formatDate(coupon.endsAt)}`}</td>
                 <td>{couponAvailability(coupon)}</td>
                 <td><span className={`admin-coupon-status is-${String(coupon.status || "").toLowerCase()}`}>{coupon.status}</span></td>
@@ -262,7 +265,7 @@ export default function AdminCouponsPage() {
             ))}
             {!items.length ? (
               <tr>
-                <td colSpan={7}>{loading ? "Cargando cupones..." : "Aún no hay cupones creados."}</td>
+                <td colSpan={8}>{loading ? "Cargando cupones..." : "Aún no hay cupones creados."}</td>
               </tr>
             ) : null}
           </tbody>

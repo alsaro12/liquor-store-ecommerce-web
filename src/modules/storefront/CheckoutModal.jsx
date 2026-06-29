@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { createOrder, loadStoreDeliveryConfig, quoteDelivery, resolveProductImage } from "./storefrontApi.js";
+import { createOrder, loadStoreDeliveryConfig, quoteDelivery, resolveProductImage, validateDeliveryCoupon } from "./storefrontApi.js";
 import AddressPicker from "./AddressPicker.jsx";
 import { createDireccion } from "./direccionesApi.js";
 import { formatOrderMoney, getOrderDetailUrl, getWhatsappOrderUrl, saveOrderDetail } from "./orderWhatsapp.js";
@@ -50,6 +50,10 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
   const [deliveryQuote, setDeliveryQuote] = useState(null);
   const [deliveryQuoteLoading, setDeliveryQuoteLoading] = useState(false);
   const [expandedCombos, setExpandedCombos] = useState(() => new Set());
+  const [couponCode, setCouponCode] = useState("");
+  const [couponResult, setCouponResult] = useState(null);
+  const [couponMessage, setCouponMessage] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -57,6 +61,9 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
       setSubmitting(false);
       setSuccessCode("");
       setExpandedCombos(new Set());
+      setCouponCode("");
+      setCouponResult(null);
+      setCouponMessage("");
       return;
     }
 
@@ -148,6 +155,11 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
     };
   }, [open, mode, location?.latitud, location?.longitud]);
 
+  useEffect(() => {
+    setCouponResult(null);
+    setCouponMessage("");
+  }, [deliveryQuote?.price]);
+
   if (!open) return null;
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -158,9 +170,36 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
     && Number.isFinite(Number(deliveryConfig.store.latitud))
     && Number.isFinite(Number(deliveryConfig.store.longitud));
   const shipping = mode === "delivery" && deliveryQuote?.available ? Number(deliveryQuote.price || 0) : 0;
+  const deliveryDiscount = Math.min(shipping, Math.max(0, Number(couponResult?.deliveryDiscount || 0)));
+  const chargedShipping = Math.max(0, shipping - deliveryDiscount);
   const serviceFee = 0;
-  const total = subtotal + shipping + serviceFee;
-  const visibleDelivery = shipping;
+  const total = subtotal + chargedShipping + serviceFee;
+
+  async function applyCoupon(event) {
+    event.preventDefault();
+    setCouponMessage("");
+    setCouponResult(null);
+    const code = couponCode.trim();
+    if (!code) {
+      setCouponMessage("Ingresa un código de cupón.");
+      return;
+    }
+    if (!deliveryQuote?.available || !shipping) {
+      setCouponMessage("El cupón se aplica cuando el delivery ya está calculado.");
+      return;
+    }
+    setCouponLoading(true);
+    try {
+      const result = await validateDeliveryCoupon({ code, shipping });
+      setCouponResult(result);
+      setCouponCode(result.code || code.toUpperCase());
+      setCouponMessage(`Cupón aplicado al delivery: -${formatMoney(result.deliveryDiscount)}.`);
+    } catch (err) {
+      setCouponMessage(err?.message || "Cupón no disponible.");
+    } finally {
+      setCouponLoading(false);
+    }
+  }
 
   function toggleComboDetail(id) {
     setExpandedCombos((current) => {
@@ -252,7 +291,19 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
         })),
         total,
         subtotal,
-        shipping,
+        shipping: chargedShipping,
+        shippingBeforeDiscount: shipping,
+        deliveryDiscount,
+        coupon: couponResult ? {
+          id: couponResult.id || "",
+          code: couponResult.code || couponCode.trim(),
+          title: couponResult.title || "",
+          appliesTo: "delivery",
+          discountType: couponResult.discountType || "amount",
+          discountValue: Number(couponResult.discountValue || 0),
+          deliveryDiscount
+        } : null,
+        couponCode: couponResult?.code || "",
         serviceFee,
         serviceFeeRate: 0,
         deliveryDistanceKm: mode === "delivery" ? deliveryQuote?.distanceKm ?? null : null,
@@ -282,7 +333,16 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
           pickupDate: ""
         },
         items: payload.items,
-        totals: { subtotal, shipping, serviceFee, serviceFeeRate: 0, total },
+        totals: {
+          subtotal,
+          shipping: chargedShipping,
+          shippingBeforeDiscount: shipping,
+          deliveryDiscount,
+          serviceFee,
+          serviceFeeRate: 0,
+          total
+        },
+        coupon: payload.coupon,
         deliveryQuote: mode === "delivery" ? deliveryQuote : null,
         notes: notes.trim(),
         detailUrl
@@ -560,9 +620,37 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
                 </ul>
                 <dl>
                   <div><dt>Subtotal</dt><dd>{formatMoney(subtotal)}</dd></div>
-                  <div><dt>Delivery</dt><dd>{deliveryQuoteLoading || !deliveryQuote ? "Calculando..." : !deliveryQuote.available ? "Sin cobertura" : formatMoney(visibleDelivery)}</dd></div>
+                  <div><dt>Delivery</dt><dd>{deliveryQuoteLoading || !deliveryQuote ? "Calculando..." : !deliveryQuote.available ? "Sin cobertura" : formatMoney(shipping)}</dd></div>
+                  {deliveryDiscount > 0 ? (
+                    <div className="checkout-summary-discount"><dt>Cupón delivery</dt><dd>-{formatMoney(deliveryDiscount)}</dd></div>
+                  ) : null}
                   <div className="checkout-summary-total"><dt>Total</dt><dd>{formatMoney(total)}</dd></div>
                 </dl>
+                <form className="checkout-coupon-form" onSubmit={applyCoupon}>
+                  <label htmlFor="checkout-coupon-code">Cupón de delivery</label>
+                  <div>
+                    <input
+                      id="checkout-coupon-code"
+                      type="text"
+                      value={couponCode}
+                      onChange={(event) => {
+                        setCouponCode(event.target.value.toUpperCase());
+                        setCouponResult(null);
+                        setCouponMessage("");
+                      }}
+                      placeholder="Código"
+                      autoComplete="off"
+                    />
+                    <button type="submit" disabled={couponLoading || !deliveryQuote?.available}>
+                      {couponLoading ? "..." : "Aplicar"}
+                    </button>
+                  </div>
+                  {couponMessage ? (
+                    <p className={couponResult ? "is-success" : ""}>{couponMessage}</p>
+                  ) : (
+                    <small>Solo descuenta el delivery. No modifica el precio de productos.</small>
+                  )}
+                </form>
               </aside>
             </div>
           </>
