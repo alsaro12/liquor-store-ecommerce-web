@@ -30,7 +30,7 @@ function saveLastCheckoutForm(data) {
   } catch {}
 }
 
-export default function CheckoutModal({ open, onClose, items, authUser, onSuccess }) {
+export default function CheckoutModal({ open, onClose, items, authUser, onSuccess, couponDraft = "", onCouponDraftChange = () => {} }) {
   const mode = "delivery";
   const [form, setForm] = useState({
     name: "",
@@ -61,11 +61,11 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
       setSubmitting(false);
       setSuccessCode("");
       setExpandedCombos(new Set());
-      setCouponCode("");
       setCouponResult(null);
       setCouponMessage("");
       return;
     }
+    setCouponCode(String(couponDraft || "").toUpperCase());
 
     const saved = readLastCheckoutForm();
     if (!saved) return;
@@ -89,7 +89,7 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
         confirmedByMapMove: true
       });
     }
-  }, [open]);
+  }, [open, couponDraft]);
 
   useEffect(() => {
     if (authUser) {
@@ -192,7 +192,9 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
     try {
       const result = await validateDeliveryCoupon({ code, shipping });
       setCouponResult(result);
-      setCouponCode(result.code || code.toUpperCase());
+      const normalizedCode = result.code || code.toUpperCase();
+      setCouponCode(normalizedCode);
+      onCouponDraftChange(normalizedCode);
       setCouponMessage(`Cupón aplicado al delivery: -${formatMoney(result.deliveryDiscount)}.`);
     } catch (err) {
       setCouponMessage(err?.message || "Cupón no disponible.");
@@ -634,7 +636,9 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
                       type="text"
                       value={couponCode}
                       onChange={(event) => {
-                        setCouponCode(event.target.value.toUpperCase());
+                        const nextCode = event.target.value.toUpperCase();
+                        setCouponCode(nextCode);
+                        onCouponDraftChange(nextCode);
                         setCouponResult(null);
                         setCouponMessage("");
                       }}

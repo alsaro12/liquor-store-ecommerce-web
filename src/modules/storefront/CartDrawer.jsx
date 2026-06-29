@@ -15,9 +15,10 @@ export default function CartDrawer({
   onRemove,
   onCheckout,
   onContinueShopping,
-  productsMap
+  productsMap,
+  couponCode = "",
+  onCouponCodeChange = () => {}
 }) {
-  const [promoCode, setPromoCode] = useState("");
   const [promoMsg, setPromoMsg] = useState("");
   const [expandedCombos, setExpandedCombos] = useState(() => new Set());
 
@@ -27,8 +28,11 @@ export default function CartDrawer({
 
   function applyPromo(event) {
     event.preventDefault();
-    if (!promoCode.trim()) return;
-    setPromoMsg("El cupón se valida al finalizar y descuenta solo el delivery.");
+    if (!couponCode.trim()) {
+      setPromoMsg("Ingresa un código de cupón.");
+      return;
+    }
+    setPromoMsg("Código guardado. Se validará contra tus cupones al calcular el delivery.");
   }
 
   function toggleComboDetail(id) {
@@ -175,8 +179,11 @@ export default function CartDrawer({
                   id="cart-promo-code"
                   type="text"
                   placeholder="Ingresa tu código"
-                  value={promoCode}
-                  onChange={(event) => setPromoCode(event.target.value)}
+                  value={couponCode}
+                  onChange={(event) => {
+                    onCouponCodeChange(event.target.value.toUpperCase());
+                    setPromoMsg("");
+                  }}
                 />
                 <button type="submit">Aplicar</button>
               </div>

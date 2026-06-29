@@ -1301,6 +1301,7 @@ export default function Storefront() {
   const [cartOpen, setCartOpen] = useState(false);
   const [cartToast, setCartToast] = useState(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [deliveryCouponCode, setDeliveryCouponCode] = useState("");
 
   useEffect(() => {
     try {
@@ -2106,6 +2107,8 @@ export default function Storefront() {
         onCheckout={jumpToCheckout}
         onContinueShopping={() => setCartOpen(false)}
         productsMap={productsMap}
+        couponCode={deliveryCouponCode}
+        onCouponCodeChange={setDeliveryCouponCode}
       />
 
       <CartToast
@@ -2135,8 +2138,11 @@ export default function Storefront() {
         onClose={() => setCheckoutOpen(false)}
         items={cart}
         authUser={authUser}
+        couponDraft={deliveryCouponCode}
+        onCouponDraftChange={setDeliveryCouponCode}
         onSuccess={() => {
           setCart([]);
+          setDeliveryCouponCode("");
         }}
       />
 
