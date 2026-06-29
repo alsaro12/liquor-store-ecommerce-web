@@ -49,10 +49,10 @@ function parseMoneyInput(value) {
   return Number.isFinite(parsed) ? parsed : NaN;
 }
 
-function orderTimestamp(order) {
-  const direct = new Date(order?.createdAt || "").getTime();
+function parseTimestamp(value) {
+  const direct = new Date(value || "").getTime();
   if (!Number.isNaN(direct)) return direct;
-  const match = String(order?.createdAt || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(.+)$/);
+  const match = String(value || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(.+)$/);
   if (!match) return 0;
   const [, day, month, year, timeText] = match;
   const normalizedTime = timeText
@@ -62,6 +62,45 @@ function orderTimestamp(order) {
     .replace("p.m.", "PM");
   const parsed = new Date(`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")} ${normalizedTime}`).getTime();
   return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function orderTimestamp(order) {
+  return parseTimestamp(order?.createdAt);
+}
+
+function formatClock(value) {
+  const timestamp = parseTimestamp(value);
+  if (!timestamp) return "--:--";
+  return new Intl.DateTimeFormat("es-PE", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(new Date(timestamp));
+}
+
+const ORDER_STATUS_TIME_RULES = {
+  pendiente: { key: "PENDIENTE", label: "Creado", warn: 8, danger: 15 },
+  validado: { key: "VALIDADO", label: "Aprobado", warn: 10, danger: 20 },
+  en_camino: { key: "EN_CAMINO", label: "En camino", warn: 25, danger: 45 },
+  entregado: { key: "ENTREGADO", label: "Finalizado", closed: true },
+  cancelado: { key: "CANCELADO", label: "Cancelado", closed: true },
+  rechazado: { key: "RECHAZADO", label: "Rechazado", closed: true }
+};
+
+function orderStatusTimeInfo(order) {
+  const rule = ORDER_STATUS_TIME_RULES[order?.status] || ORDER_STATUS_TIME_RULES.pendiente;
+  const rawTimestamp = order?.statusTimestamps?.[rule.key] || order?.lastUpdatedAt || order?.createdAt;
+  const timestamp = parseTimestamp(rawTimestamp) || orderTimestamp(order);
+  const timeText = timestamp ? formatClock(timestamp) : "--:--";
+  if (rule.closed) {
+    return { tone: "closed", text: `${rule.label} ${timeText}` };
+  }
+  const elapsed = timestamp ? Math.max(0, Math.floor((Date.now() - timestamp) / 60000)) : 0;
+  const tone = elapsed >= rule.danger ? "danger" : elapsed >= rule.warn ? "warning" : "normal";
+  return {
+    tone,
+    text: `${rule.label} ${timeText} · ${elapsed} min`
+  };
 }
 
 function sortOperationalQueue(items) {
@@ -259,6 +298,8 @@ function normalizeAdminOrder(order) {
     items: rawItems.map((item) => `${item.quantity || 1}x ${item.name || "Producto"}`),
     reason: order?.reason || order?.statusReason || "",
     createdAt: order?.createdAt || "",
+    lastUpdatedAt: order?.lastUpdatedAt || "",
+    statusTimestamps: order?.statusTimestamps && typeof order.statusTimestamps === "object" ? order.statusTimestamps : {},
     note: order?.notes || ""
   };
 }
@@ -667,6 +708,7 @@ export default function AdminOrdersPage() {
           <article key={order.id} className={`admin-order-card is-${order.status}`}>
             {(() => {
               const nextAction = nextActionFor(order.status);
+              const timeInfo = orderStatusTimeInfo(order);
               return (
                 <>
             <div className="admin-order-main">
@@ -675,6 +717,7 @@ export default function AdminOrdersPage() {
                 <div>
                   <span>Código interno {order.id}</span>
                   <small>Código cliente {order.publicCode || "Sin código cliente"}</small>
+                  <span className={`admin-order-time-pill is-${timeInfo.tone}`}>{timeInfo.text}</span>
                   <h2>{order.customer}</h2>
                   <p>{order.phone} · {order.address}</p>
                   <div className="admin-order-header-actions">

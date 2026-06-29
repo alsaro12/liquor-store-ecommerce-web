@@ -295,6 +295,34 @@ export function loadCombosAll() {
   return requestJson("/api/combos");
 }
 
+export function loadCouponsAll() {
+  return requestJson("/api/coupons");
+}
+
+export async function saveCoupon(id, payload) {
+  const path = id ? `/api/coupons/${encodeURIComponent(id)}` : "/api/coupons";
+  const response = await fetch(buildApiUrl(path), {
+    method: id ? "PUT" : "POST",
+    headers: buildAuthHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response) || "No se pudo guardar el cupón.");
+  }
+  return response.json();
+}
+
+export async function deleteCoupon(id) {
+  const response = await fetch(buildApiUrl(`/api/coupons/${encodeURIComponent(id)}`), {
+    method: "DELETE",
+    headers: buildAuthHeaders()
+  });
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response) || "No se pudo eliminar el cupón.");
+  }
+  return response.json();
+}
+
 export async function createCombo(payload) {
   const response = await fetch(buildApiUrl("/api/combos"), {
     method: "POST",

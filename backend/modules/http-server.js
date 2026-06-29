@@ -18,6 +18,7 @@ const { createAiObjectServer } = require("../objects/ai/server");
 const { createAuthObjectServer } = require("../objects/auth/server");
 const { createDbObjectServer } = require("../objects/db/server");
 const { createCombosObjectServer } = require("../objects/combos/server");
+const { createCouponsObjectServer } = require("../objects/coupons/server");
 const { createCuentaObjectServer } = require("../objects/cuenta/server");
 const { createDireccionesObjectServer } = require("../objects/direcciones/server");
 const { createFavoritosObjectServer } = require("../objects/favoritos/server");
@@ -3019,6 +3020,15 @@ function buildOrderApiShape(base) {
   const total = round2(subtotal + shipping + serviceFee);
   const customer = base?.customer && typeof base.customer === "object" ? base.customer : {};
   const usuarioId = toInt(base?.usuarioId ?? base?.usuario_id, 0);
+  const sourceStatusTimestamps = base?.statusTimestamps && typeof base.statusTimestamps === "object" ? base.statusTimestamps : {};
+  const statusTimestamps = {
+    PENDIENTE: trimValue(sourceStatusTimestamps.PENDIENTE || sourceStatusTimestamps.pendiente || base?.createdAt || ""),
+    VALIDADO: trimValue(sourceStatusTimestamps.VALIDADO || sourceStatusTimestamps.validado || sourceStatusTimestamps.APROBADO || ""),
+    EN_CAMINO: trimValue(sourceStatusTimestamps.EN_CAMINO || sourceStatusTimestamps.en_camino || sourceStatusTimestamps.ENVIADO || ""),
+    ENTREGADO: trimValue(sourceStatusTimestamps.ENTREGADO || sourceStatusTimestamps.entregado || sourceStatusTimestamps.FINALIZADO || sourceStatusTimestamps.CERRADO || ""),
+    CANCELADO: trimValue(sourceStatusTimestamps.CANCELADO || sourceStatusTimestamps.cancelado || ""),
+    RECHAZADO: trimValue(sourceStatusTimestamps.RECHAZADO || sourceStatusTimestamps.rechazado || "")
+  };
   return {
     id: trimValue(base?.id || ""),
     publicCode: trimValue(base?.publicCode || base?.customerCode || ""),
@@ -3074,6 +3084,7 @@ function buildOrderApiShape(base) {
       : null,
     reason: trimValue(base?.reason || base?.statusReason || ""),
     statusReason: trimValue(base?.statusReason || base?.reason || ""),
+    statusTimestamps,
     notes: trimValue(base?.notes || ""),
     inventoryDispatchedAt: trimValue(base?.inventoryDispatchedAt || ""),
     lastUpdatedAt: trimValue(base?.lastUpdatedAt || base?.createdAt || nowIso())
@@ -3200,11 +3211,12 @@ async function createOrder(payload, options = {}) {
   const computedTotal = round2(subtotal + shipping + serviceFee);
 
   const current = await readOrdersStore();
+  const createdAt = trimValue(payload?.createdAt || new Date().toLocaleString("es-PE"));
   const order = buildOrderApiShape({
     id: nextOrderId(current),
     publicCode: nextPublicOrderCode(current),
     usuarioId: toInt(options?.usuarioId ?? payload?.usuarioId ?? payload?.usuario_id, 0) || null,
-    createdAt: trimValue(payload?.createdAt || new Date().toLocaleString("es-PE")),
+    createdAt,
     mode,
     modeLabel: "Delivery",
     pickupDate: "",
@@ -3235,6 +3247,9 @@ async function createOrder(payload, options = {}) {
     deliveryProof: payload?.deliveryProof || null,
     reason: trimValue(payload?.reason || payload?.statusReason || ""),
     statusReason: trimValue(payload?.statusReason || payload?.reason || ""),
+    statusTimestamps: {
+      PENDIENTE: createdAt
+    },
     notes: trimValue(payload?.notes || ""),
     lastUpdatedAt: nowIso()
   });
@@ -3340,9 +3355,17 @@ async function updateOrder(orderId, payload) {
     deliveryFinanceNote = trimValue(payload.deliveryFinanceNote || "");
     deliveryFinanceAt = deliveryCost === null || deliveryCost === undefined ? "" : nowIso();
   }
+  const nextStatus = payload?.status !== undefined ? normalizeOrderStatus(payload.status, { strict: true }) : existing.status;
+  const statusTimestamps = {
+    ...(existing.statusTimestamps || {}),
+    ...(payload?.statusTimestamps && typeof payload.statusTimestamps === "object" ? payload.statusTimestamps : {})
+  };
+  if (previousStatus !== nextStatus && !trimValue(statusTimestamps[nextStatus] || "")) {
+    statusTimestamps[nextStatus] = nowIso();
+  }
   const next = buildOrderApiShape({
     ...existing,
-    status: payload?.status !== undefined ? normalizeOrderStatus(payload.status, { strict: true }) : existing.status,
+    status: nextStatus,
     reason: payload?.reason !== undefined ? trimValue(payload.reason || "") : existing.reason,
     statusReason: payload?.reason !== undefined
       ? trimValue(payload.reason || "")
@@ -3361,6 +3384,7 @@ async function updateOrder(orderId, payload) {
     deliveryCost,
     deliveryFinanceNote,
     deliveryFinanceAt,
+    statusTimestamps,
     inventoryDispatchedAt: existing.inventoryDispatchedAt,
     lastUpdatedAt: nowIso()
   });
@@ -6723,6 +6747,106 @@ async function validarPromoCodigo(codigo) {
     const row = Array.isArray(rows) && rows.length ? rows[0] : null;
     return row ? buildPromoApiShape(row) : null;
   });
+}
+
+function normalizeCouponCode(value) {
+  return trimValue(value || "")
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+}
+
+function normalizeCouponStatus(value) {
+  const raw = trimValue(value || "ACTIVO").toUpperCase();
+  return raw === "INACTIVO" ? "INACTIVO" : "ACTIVO";
+}
+
+function normalizeCouponDiscountType(value) {
+  const raw = trimValue(value || "amount").toLowerCase();
+  return raw === "percent" || raw === "percentage" || raw === "porcentaje" ? "percent" : "amount";
+}
+
+function normalizeCouponDate(value) {
+  const text = trimValue(value || "");
+  if (!text) return "";
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString();
+}
+
+function buildCouponApiShape(row = {}) {
+  const code = normalizeCouponCode(row.code || row.codigo || row.id || "");
+  const discountType = normalizeCouponDiscountType(row.discountType || row.tipoDescuento || row.discount_type);
+  const rawValue = round2(row.discountValue ?? row.valorDescuento ?? row.discount_value ?? 0);
+  const discountValue = discountType === "percent" ? Math.min(100, Math.max(0, rawValue)) : Math.max(0, rawValue);
+  const unlimitedDates = row.unlimitedDates === true || row.vigenciaIlimitada === true || row.unlimited_dates === true;
+  const unlimitedUses = row.unlimitedUses === true || row.usosIlimitados === true || row.unlimited_uses === true;
+  const maxUses = unlimitedUses ? null : Math.max(0, toInt(row.maxUses ?? row.max_uses ?? row.unidades ?? 0, 0));
+  const usedCount = Math.max(0, toInt(row.usedCount ?? row.used_count ?? 0, 0));
+  return {
+    id: trimValue(row.id || code || `coupon-${Date.now()}`),
+    title: trimValue(row.title || row.titulo || "").slice(0, 120),
+    code,
+    description: trimValue(row.description || row.descripcion || "").slice(0, 240),
+    discountType,
+    discountValue,
+    unlimitedDates,
+    startsAt: unlimitedDates ? "" : normalizeCouponDate(row.startsAt || row.desde || row.starts_at),
+    endsAt: unlimitedDates ? "" : normalizeCouponDate(row.endsAt || row.hasta || row.ends_at),
+    unlimitedUses,
+    maxUses,
+    usedCount,
+    status: normalizeCouponStatus(row.status || row.estado),
+    createdAt: trimValue(row.createdAt || row.created_at || nowIso()),
+    updatedAt: trimValue(row.updatedAt || row.updated_at || nowIso())
+  };
+}
+
+function assertCouponInput(coupon) {
+  if (!coupon.title) throw createHttpError(400, "El cupón necesita un título.");
+  if (!coupon.code) throw createHttpError(400, "El cupón necesita un código.");
+  if (coupon.discountValue <= 0) throw createHttpError(400, "El descuento debe ser mayor a 0.");
+  if (!coupon.unlimitedDates && coupon.startsAt && coupon.endsAt && new Date(coupon.startsAt).getTime() > new Date(coupon.endsAt).getTime()) {
+    throw createHttpError(400, "La fecha inicial no puede ser mayor que la fecha final.");
+  }
+  if (!coupon.unlimitedUses && (!Number.isFinite(Number(coupon.maxUses)) || Number(coupon.maxUses) <= 0)) {
+    throw createHttpError(400, "Define unidades disponibles o marca usos ilimitados.");
+  }
+}
+
+async function listCouponsAll() {
+  const rows = await readFirebaseCollection("coupons");
+  return (Array.isArray(rows) ? rows : [])
+    .map(buildCouponApiShape)
+    .sort((left, right) => String(right.updatedAt || "").localeCompare(String(left.updatedAt || "")));
+}
+
+async function saveCoupon(id, payload = {}) {
+  const existing = id ? await getFirebaseDoc("coupons", id) : null;
+  const baseCode = normalizeCouponCode(payload.code || payload.codigo || existing?.code || id || "");
+  const couponId = trimValue(id || baseCode);
+  const next = buildCouponApiShape({
+    ...(existing || {}),
+    ...payload,
+    id: couponId,
+    code: baseCode,
+    createdAt: existing?.createdAt || nowIso(),
+    usedCount: existing?.usedCount ?? payload.usedCount ?? 0,
+    updatedAt: nowIso()
+  });
+  assertCouponInput(next);
+  await writeFirebaseDoc("coupons", next.id, next);
+  return next;
+}
+
+async function deleteCoupon(id) {
+  const safeId = trimValue(id || "");
+  if (!safeId) throw createHttpError(400, "Falta el cupón.");
+  await deleteFirebaseDoc("coupons", safeId);
+  return { ok: true, id: safeId };
 }
 
 // ============================================================
@@ -10919,6 +11043,15 @@ const API_OBJECT_ROUTE_HANDLERS = [
     listPromosActivas,
     getPromoDestacada,
     validarPromoCodigo
+  }),
+  createCouponsObjectServer({
+    sendText,
+    sendJson,
+    parseJsonBody,
+    listCouponsAll,
+    saveCoupon,
+    deleteCoupon,
+    requireStaff
   }),
   createMetodosPagoObjectServer({
     sendText,
