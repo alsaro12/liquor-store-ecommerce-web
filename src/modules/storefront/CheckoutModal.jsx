@@ -50,7 +50,6 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
   const [deliveryQuote, setDeliveryQuote] = useState(null);
   const [deliveryQuoteLoading, setDeliveryQuoteLoading] = useState(false);
   const [expandedCombos, setExpandedCombos] = useState(() => new Set());
-  const [couponCode, setCouponCode] = useState("");
   const [couponResult, setCouponResult] = useState(null);
   const [couponMessage, setCouponMessage] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
@@ -63,9 +62,9 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
       setExpandedCombos(new Set());
       setCouponResult(null);
       setCouponMessage("");
+      setCouponLoading(false);
       return;
     }
-    setCouponCode(String(couponDraft || "").toUpperCase());
 
     const saved = readLastCheckoutForm();
     if (!saved) return;
@@ -155,10 +154,35 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
     };
   }, [open, mode, location?.latitud, location?.longitud]);
 
+  const shippingForCoupon = mode === "delivery" && deliveryQuote?.available ? Number(deliveryQuote.price || 0) : 0;
+
   useEffect(() => {
+    const code = String(couponDraft || "").trim().toUpperCase();
     setCouponResult(null);
     setCouponMessage("");
-  }, [deliveryQuote?.price]);
+    if (!open || !code || !deliveryQuote?.available || !shippingForCoupon) {
+      setCouponLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setCouponLoading(true);
+    validateDeliveryCoupon({ code, shipping: shippingForCoupon })
+      .then((result) => {
+        if (cancelled) return;
+        setCouponResult(result);
+        onCouponDraftChange(result.code || code);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setCouponMessage(err?.message || "Cupón no disponible.");
+      })
+      .finally(() => {
+        if (!cancelled) setCouponLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, couponDraft, deliveryQuote?.available, shippingForCoupon]);
 
   if (!open) return null;
 
@@ -169,39 +193,11 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
     && deliveryConfig?.store?.longitud !== undefined
     && Number.isFinite(Number(deliveryConfig.store.latitud))
     && Number.isFinite(Number(deliveryConfig.store.longitud));
-  const shipping = mode === "delivery" && deliveryQuote?.available ? Number(deliveryQuote.price || 0) : 0;
+  const shipping = shippingForCoupon;
   const deliveryDiscount = Math.min(shipping, Math.max(0, Number(couponResult?.deliveryDiscount || 0)));
   const chargedShipping = Math.max(0, shipping - deliveryDiscount);
   const serviceFee = 0;
   const total = subtotal + chargedShipping + serviceFee;
-
-  async function applyCoupon(event) {
-    event.preventDefault();
-    setCouponMessage("");
-    setCouponResult(null);
-    const code = couponCode.trim();
-    if (!code) {
-      setCouponMessage("Ingresa un código de cupón.");
-      return;
-    }
-    if (!deliveryQuote?.available || !shipping) {
-      setCouponMessage("El cupón se aplica cuando el delivery ya está calculado.");
-      return;
-    }
-    setCouponLoading(true);
-    try {
-      const result = await validateDeliveryCoupon({ code, shipping });
-      setCouponResult(result);
-      const normalizedCode = result.code || code.toUpperCase();
-      setCouponCode(normalizedCode);
-      onCouponDraftChange(normalizedCode);
-      setCouponMessage(`Cupón aplicado al delivery: -${formatMoney(result.deliveryDiscount)}.`);
-    } catch (err) {
-      setCouponMessage(err?.message || "Cupón no disponible.");
-    } finally {
-      setCouponLoading(false);
-    }
-  }
 
   function toggleComboDetail(id) {
     setExpandedCombos((current) => {
@@ -298,7 +294,7 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
         deliveryDiscount,
         coupon: couponResult ? {
           id: couponResult.id || "",
-          code: couponResult.code || couponCode.trim(),
+          code: couponResult.code || String(couponDraft || "").trim().toUpperCase(),
           title: couponResult.title || "",
           appliesTo: "delivery",
           discountType: couponResult.discountType || "amount",
@@ -625,36 +621,12 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
                   <div><dt>Delivery</dt><dd>{deliveryQuoteLoading || !deliveryQuote ? "Calculando..." : !deliveryQuote.available ? "Sin cobertura" : formatMoney(shipping)}</dd></div>
                   {deliveryDiscount > 0 ? (
                     <div className="checkout-summary-discount"><dt>Cupón delivery</dt><dd>-{formatMoney(deliveryDiscount)}</dd></div>
+                  ) : couponDraft && couponLoading ? (
+                    <div className="checkout-summary-discount"><dt>Cupón delivery</dt><dd>Validando...</dd></div>
                   ) : null}
                   <div className="checkout-summary-total"><dt>Total</dt><dd>{formatMoney(total)}</dd></div>
                 </dl>
-                <form className="checkout-coupon-form" onSubmit={applyCoupon}>
-                  <label htmlFor="checkout-coupon-code">Cupón de delivery</label>
-                  <div>
-                    <input
-                      id="checkout-coupon-code"
-                      type="text"
-                      value={couponCode}
-                      onChange={(event) => {
-                        const nextCode = event.target.value.toUpperCase();
-                        setCouponCode(nextCode);
-                        onCouponDraftChange(nextCode);
-                        setCouponResult(null);
-                        setCouponMessage("");
-                      }}
-                      placeholder="Código"
-                      autoComplete="off"
-                    />
-                    <button type="submit" disabled={couponLoading || !deliveryQuote?.available}>
-                      {couponLoading ? "..." : "Aplicar"}
-                    </button>
-                  </div>
-                  {couponMessage ? (
-                    <p className={couponResult ? "is-success" : ""}>{couponMessage}</p>
-                  ) : (
-                    <small>Solo descuenta el delivery. No modifica el precio de productos.</small>
-                  )}
-                </form>
+                {couponMessage ? <p className="checkout-coupon-message">{couponMessage}</p> : null}
               </aside>
             </div>
           </>

@@ -12307,10 +12307,16 @@ button.checkout-combo-toggle[aria-expanded="true"] > b::before {
   cursor: pointer;
 }
 
+.cart-drawer-promo button:disabled {
+  opacity: 0.68;
+  cursor: wait;
+}
+
 .cart-drawer-promo-msg {
   margin: 6px 0 0;
   font-size: 12px;
-  color: #6b5132;
+  color: #8f2f20;
+  font-weight: 800;
 }
 
 .cart-drawer-totals {
@@ -12333,6 +12339,11 @@ button.checkout-combo-toggle[aria-expanded="true"] > b::before {
 .cart-drawer-totals dt,
 .cart-drawer-totals dd {
   margin: 0;
+}
+
+.cart-drawer-discount-row {
+  color: #0f7a4d !important;
+  font-weight: 900;
 }
 
 .cart-drawer-total-row {
@@ -13293,6 +13304,14 @@ button.checkout-combo-toggle[aria-expanded="true"] > b::before {
 .checkout-summary-discount {
   color: #0f7a4d !important;
   font-weight: 900;
+}
+
+.checkout-coupon-message {
+  margin: 10px 0 0;
+  color: #8f2f20;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.25;
 }
 
 .checkout-coupon-form {

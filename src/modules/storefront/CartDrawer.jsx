@@ -1,9 +1,18 @@
 import React, { useState } from "react";
-import { resolveProductImage } from "./storefrontApi.js";
+import { resolveProductImage, validateDeliveryCoupon } from "./storefrontApi.js";
 import productImageUnavailable from "../../assets/storefront/imagennodisponible2.png";
 
 function formatMoney(value) {
   return `S/ ${Number(value || 0).toFixed(2)}`;
+}
+
+function formatCouponDiscount(result) {
+  if (!result) return "";
+  if (String(result.discountType || "").toLowerCase() === "percent") {
+    return `-${Number(result.discountValue || 0).toFixed(0)}% delivery`;
+  }
+  const amount = Number(result.deliveryDiscount ?? result.discountValue ?? 0);
+  return `-${formatMoney(amount)}`;
 }
 
 export default function CartDrawer({
@@ -20,19 +29,33 @@ export default function CartDrawer({
   onCouponCodeChange = () => {}
 }) {
   const [promoMsg, setPromoMsg] = useState("");
+  const [promoResult, setPromoResult] = useState(null);
+  const [promoLoading, setPromoLoading] = useState(false);
   const [expandedCombos, setExpandedCombos] = useState(() => new Set());
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const total = subtotal;
   const units = items.reduce((sum, item) => sum + item.quantity, 0);
 
-  function applyPromo(event) {
+  async function applyPromo(event) {
     event.preventDefault();
-    if (!couponCode.trim()) {
+    const code = couponCode.trim().toUpperCase();
+    setPromoMsg("");
+    setPromoResult(null);
+    if (!code) {
       setPromoMsg("Ingresa un código de cupón.");
       return;
     }
-    setPromoMsg("Código guardado. Se validará contra tus cupones al calcular el delivery.");
+    setPromoLoading(true);
+    try {
+      const result = await validateDeliveryCoupon({ code, shipping: 9999 });
+      setPromoResult(result);
+      onCouponCodeChange(result.code || code);
+    } catch (err) {
+      setPromoMsg(err?.message || "Cupón no disponible.");
+    } finally {
+      setPromoLoading(false);
+    }
   }
 
   function toggleComboDetail(id) {
@@ -183,9 +206,12 @@ export default function CartDrawer({
                   onChange={(event) => {
                     onCouponCodeChange(event.target.value.toUpperCase());
                     setPromoMsg("");
+                    setPromoResult(null);
                   }}
                 />
-                <button type="submit">Aplicar</button>
+                <button type="submit" disabled={promoLoading}>
+                  {promoLoading ? "..." : "Aplicar"}
+                </button>
               </div>
               {promoMsg ? <p className="cart-drawer-promo-msg">{promoMsg}</p> : null}
             </form>
@@ -199,6 +225,12 @@ export default function CartDrawer({
                 <dt>Envío</dt>
                 <dd>Se calcula al finalizar</dd>
               </div>
+              {promoResult ? (
+                <div className="cart-drawer-discount-row">
+                  <dt>Descuento delivery</dt>
+                  <dd>{formatCouponDiscount(promoResult)}</dd>
+                </div>
+              ) : null}
               <div className="cart-drawer-total-row">
                 <dt>Total</dt>
                 <dd>{formatMoney(total)}</dd>
