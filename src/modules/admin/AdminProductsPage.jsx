@@ -38,7 +38,9 @@ const EMPTY_FORM = {
   cigaretteStockLink: {
     enabled: false,
     unitProductId: "",
+    unitVariantId: "",
     box20ProductId: "",
+    box20VariantId: "",
     unitsPerBox: 20
   },
   variants: []
@@ -91,9 +93,29 @@ function normalizeCigaretteStockLink(value) {
   return {
     enabled: source.enabled === true,
     unitProductId: String(source.unitProductId || source.unit_product_id || ""),
+    unitVariantId: String(source.unitVariantId || source.unit_variant_id || ""),
     box20ProductId: String(source.box20ProductId || source.box20_product_id || ""),
+    box20VariantId: String(source.box20VariantId || source.box20_variant_id || ""),
     unitsPerBox: Number(source.unitsPerBox || source.units_per_box || 20) || 20
   };
+}
+
+function adminProductOptionId(product) {
+  return String(product?.code || product?.id || product?.["N°"] || "").trim();
+}
+
+function adminProductVariants(product) {
+  return Array.isArray(product?.variants)
+    ? product.variants
+    : Array.isArray(product?.VARIANTES)
+      ? product.VARIANTES
+      : [];
+}
+
+function findAdminProductOption(products, id) {
+  const cleanId = String(id || "").trim();
+  if (!cleanId) return null;
+  return (Array.isArray(products) ? products : []).find((product) => adminProductOptionId(product) === cleanId) || null;
 }
 
 function normalizeCigarettePresentationsForForm(value, basePrice = 0) {
@@ -477,6 +499,11 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
   const cigaretteProductOptions = useMemo(() => (
     comboProductOptions.filter((product) => normalizeFormCategory(product.category) === "Cigarros")
   ), [comboProductOptions]);
+  const cigaretteStockLink = normalizeCigaretteStockLink(form.cigaretteStockLink);
+  const cigaretteUnitProduct = findAdminProductOption(cigaretteProductOptions, cigaretteStockLink.unitProductId);
+  const cigaretteBox20Product = findAdminProductOption(cigaretteProductOptions, cigaretteStockLink.box20ProductId);
+  const cigaretteUnitVariants = adminProductVariants(cigaretteUnitProduct);
+  const cigaretteBox20Variants = adminProductVariants(cigaretteBox20Product);
 
   useEffect(() => {
     if (!quickIngressRequest || !items.length || ingress.open) return;
@@ -1117,8 +1144,8 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                     <div>
                       <strong>Enlace de stock unidad/caja x20</strong>
                       <small>
-                        {normalizeCigaretteStockLink(form.cigaretteStockLink).enabled
-                          ? `Activo: unidad ${normalizeCigaretteStockLink(form.cigaretteStockLink).unitProductId || "-"} desde caja ${normalizeCigaretteStockLink(form.cigaretteStockLink).box20ProductId || "-"}`
+                        {cigaretteStockLink.enabled
+                          ? `Activo: unidad ${cigaretteStockLink.unitProductId || "-"}${cigaretteStockLink.unitVariantId ? ` / ${cigaretteStockLink.unitVariantId}` : ""} desde caja ${cigaretteStockLink.box20ProductId || "-"}${cigaretteStockLink.box20VariantId ? ` / ${cigaretteStockLink.box20VariantId}` : ""}`
                           : "Sin enlace automático"}
                       </small>
                     </div>
@@ -1311,8 +1338,12 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
               <label className="is-span-2">
                 Producto unidad
                 <select
-                  value={normalizeCigaretteStockLink(form.cigaretteStockLink).unitProductId}
-                  onChange={(event) => updateCigaretteStockLink({ unitProductId: event.target.value, enabled: Boolean(event.target.value && normalizeCigaretteStockLink(form.cigaretteStockLink).box20ProductId) })}
+                  value={cigaretteStockLink.unitProductId}
+                  onChange={(event) => updateCigaretteStockLink({
+                    unitProductId: event.target.value,
+                    unitVariantId: "",
+                    enabled: Boolean(event.target.value && cigaretteStockLink.box20ProductId)
+                  })}
                 >
                   <option value="">Selecciona unidad</option>
                   {cigaretteProductOptions.map((product) => (
@@ -1323,10 +1354,29 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                 </select>
               </label>
               <label className="is-span-2">
+                Variante unidad
+                <select
+                  value={cigaretteStockLink.unitVariantId}
+                  onChange={(event) => updateCigaretteStockLink({ unitVariantId: event.target.value })}
+                  disabled={!cigaretteUnitVariants.length}
+                >
+                  <option value="">Sin variante especifica</option>
+                  {cigaretteUnitVariants.map((variant) => (
+                    <option key={`unit-variant-${variant.id}`} value={variant.id}>
+                      {variant.name || variant.id} · stock {variant.stock ?? 0}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="is-span-2">
                 Producto caja x20
                 <select
-                  value={normalizeCigaretteStockLink(form.cigaretteStockLink).box20ProductId}
-                  onChange={(event) => updateCigaretteStockLink({ box20ProductId: event.target.value, enabled: Boolean(normalizeCigaretteStockLink(form.cigaretteStockLink).unitProductId && event.target.value) })}
+                  value={cigaretteStockLink.box20ProductId}
+                  onChange={(event) => updateCigaretteStockLink({
+                    box20ProductId: event.target.value,
+                    box20VariantId: "",
+                    enabled: Boolean(cigaretteStockLink.unitProductId && event.target.value)
+                  })}
                 >
                   <option value="">Selecciona caja x20</option>
                   {cigaretteProductOptions.map((product) => (
@@ -1336,16 +1386,31 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                   ))}
                 </select>
               </label>
+              <label className="is-span-2">
+                Variante caja x20
+                <select
+                  value={cigaretteStockLink.box20VariantId}
+                  onChange={(event) => updateCigaretteStockLink({ box20VariantId: event.target.value })}
+                  disabled={!cigaretteBox20Variants.length}
+                >
+                  <option value="">Sin variante especifica</option>
+                  {cigaretteBox20Variants.map((variant) => (
+                    <option key={`box20-variant-${variant.id}`} value={variant.id}>
+                      {variant.name || variant.id} · stock {variant.stock ?? 0}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <div className="react-admin-cigarette-link-note is-span-2">
                 <strong>Regla</strong>
-                <span>Si la unidad no alcanza stock, se descuenta 1 caja x20 y se ingresan 20 unidades antes de vender.</span>
+                <span>Si la unidad o variante no alcanza stock, se descuenta la caja x20 enlazada y se ingresan 20 unidades de esa misma variante antes de vender.</span>
               </div>
               <div className="react-admin-modal-actions is-span-2">
                 <button
                   type="button"
                   className="react-admin-link react-admin-link-soft"
                   onClick={() => {
-                    updateCigaretteStockLink({ enabled: false, unitProductId: "", box20ProductId: "" });
+                    updateCigaretteStockLink({ enabled: false, unitProductId: "", unitVariantId: "", box20ProductId: "", box20VariantId: "" });
                     setCigaretteLinkModal({ open: false });
                   }}
                 >
@@ -1355,8 +1420,7 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                   type="button"
                   className="react-admin-link"
                   onClick={() => {
-                    const link = normalizeCigaretteStockLink(form.cigaretteStockLink);
-                    updateCigaretteStockLink({ enabled: Boolean(link.unitProductId && link.box20ProductId) });
+                    updateCigaretteStockLink({ enabled: Boolean(cigaretteStockLink.unitProductId && cigaretteStockLink.box20ProductId) });
                     setCigaretteLinkModal({ open: false });
                   }}
                 >

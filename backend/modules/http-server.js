@@ -1892,7 +1892,7 @@ function sumVariantStock(value) {
   );
 }
 
-function applyVariantStockSale(product, variantId, quantity) {
+function getProductVariantState(product, variantId) {
   const cleanVariantId = trimValue(variantId);
   if (!cleanVariantId) return null;
   const variants = normalizeProductVariants(product.variantes_json ?? product.VARIANTES ?? product.variants ?? product.variantes);
@@ -1905,24 +1905,42 @@ function applyVariantStockSale(product, variantId, quantity) {
     throw createHttpError(409, `La variante ${variant.name || cleanVariantId} está INACTIVA.`);
   }
   const variantStockBefore = round2(variant.stock || variant.STOCK_ACTUAL || 0);
-  if (variantStockBefore < quantity) {
+  return {
+    variants,
+    index,
+    variant,
+    variantId: cleanVariantId,
+    variantName: variant.name || cleanVariantId,
+    variantStockBefore
+  };
+}
+
+function applyVariantStockDelta(product, variantId, delta) {
+  const state = getProductVariantState(product, variantId);
+  if (!state) return null;
+  const variantStockAfter = round2(state.variantStockBefore + delta);
+  if (variantStockAfter < 0) {
     throw createHttpError(
       400,
-      `Stock insuficiente para ${product.nombre} - ${variant.name || cleanVariantId}. Disponible: ${variantStockBefore}, solicitado: ${quantity}.`
+      `Stock insuficiente para ${product.nombre} - ${state.variantName}. Disponible: ${state.variantStockBefore}, solicitado: ${Math.abs(delta)}.`
     );
   }
-  const variantStockAfter = round2(variantStockBefore - quantity);
-  variants[index] = { ...variant, stock: variantStockAfter };
+  const variants = state.variants;
+  variants[state.index] = { ...state.variant, stock: variantStockAfter };
   product.variantes_json = JSON.stringify(variants);
   product.VARIANTES = variants;
   product.variantes = variants;
   return {
-    variantId: cleanVariantId,
-    variantName: variant.name || cleanVariantId,
-    variantStockBefore,
+    variantId: state.variantId,
+    variantName: state.variantName,
+    variantStockBefore: state.variantStockBefore,
     variantStockAfter,
     variants
   };
+}
+
+function applyVariantStockSale(product, variantId, quantity) {
+  return applyVariantStockDelta(product, variantId, -Math.abs(quantity));
 }
 
 function hasSellableStock(item) {
@@ -3839,12 +3857,17 @@ function firebaseProductToApi(row) {
 function normalizeCigaretteStockLink(value) {
   const source = value && typeof value === "object" ? value : {};
   const unitProductId = trimValue(source.unitProductId ?? source.unit_product_id ?? "");
+  const unitVariantId = trimValue(source.unitVariantId ?? source.unit_variant_id ?? "");
   const box20ProductId = trimValue(source.box20ProductId ?? source.box20_product_id ?? "");
-  const enabled = source.enabled === true && unitProductId && box20ProductId && unitProductId !== box20ProductId;
+  const box20VariantId = trimValue(source.box20VariantId ?? source.box20_variant_id ?? "");
+  const sameTarget = unitProductId === box20ProductId && (!unitVariantId || !box20VariantId || unitVariantId === box20VariantId);
+  const enabled = source.enabled === true && unitProductId && box20ProductId && !sameTarget;
   return cleanForFirestore({
     enabled: Boolean(enabled),
     unitProductId,
+    unitVariantId,
     box20ProductId,
+    box20VariantId,
     unitsPerBox: 20
   });
 }
@@ -8239,35 +8262,44 @@ async function registerSaleFirebase(payload) {
     const originalStockBefore = round2(product.stockActual ?? product.STOCK_ACTUAL ?? 0);
     let stockBefore = originalStockBefore;
     let autoOpenPlan = null;
-    if (cigarettePresentation?.id === "unit" && stockBefore < reportQuantity) {
+    const saleVariantState = getProductVariantState(product, variantId);
+    const availableBeforeSale = saleVariantState ? saleVariantState.variantStockBefore : stockBefore;
+    if (cigarettePresentation?.id === "unit" && availableBeforeSale < reportQuantity) {
       const stockLink = normalizeCigaretteStockLink(product.cigaretteStockLink);
-      if (stockLink.enabled && parseCartProductId(stockLink.unitProductId) === productId) {
+      const unitVariantMatches = !stockLink.unitVariantId || !saleVariantState || stockLink.unitVariantId === saleVariantState.variantId;
+      if (stockLink.enabled && unitVariantMatches && parseCartProductId(stockLink.unitProductId) === productId) {
         const boxProductId = parseCartProductId(stockLink.box20ProductId);
         const boxEntry = await findFirebaseProductByLegacyId(boxProductId);
         if (!boxEntry) throw createHttpError(404, `No existe la caja x20 enlazada N° ${boxProductId}.`);
         const boxSnap = await transaction.get(boxEntry.ref);
         const boxProduct = boxSnap.data() || boxEntry.data;
         const unitsPerBox = 20;
-        const unitsNeeded = round2(reportQuantity - stockBefore);
+        const unitsNeeded = round2(reportQuantity - availableBeforeSale);
         const boxesToOpen = Math.ceil(unitsNeeded / unitsPerBox);
         const boxStockBefore = round2(boxProduct.stockActual ?? boxProduct.STOCK_ACTUAL ?? 0);
-        if (boxStockBefore < boxesToOpen) {
+        const boxVariantState = getProductVariantState(boxProduct, stockLink.box20VariantId);
+        const boxAvailableBefore = boxVariantState ? boxVariantState.variantStockBefore : boxStockBefore;
+        if (boxAvailableBefore < boxesToOpen || boxStockBefore < boxesToOpen) {
           throw createHttpError(
             409,
-            `Stock insuficiente para ${product.nombre || product.NOMBRE || productId}. Caja x20 enlazada disponible: ${boxStockBefore}, requerida: ${boxesToOpen}.`
+            `Stock insuficiente para ${product.nombre || product.NOMBRE || productId}. Caja x20 enlazada disponible: ${boxAvailableBefore}, requerida: ${boxesToOpen}.`
           );
         }
+        const boxVariantPlan = boxVariantState ? applyVariantStockDelta(boxProduct, boxVariantState.variantId, -boxesToOpen) : null;
+        const unitVariantIngressPlan = saleVariantState ? applyVariantStockDelta(product, saleVariantState.variantId, unitsPerBox * boxesToOpen) : null;
         const openedUnits = boxesToOpen * unitsPerBox;
         autoOpenPlan = {
           boxEntry,
           boxProduct,
           boxProductId,
           boxName: boxProduct.nombre || boxProduct.NOMBRE || `Producto ${boxProductId}`,
+          boxVariantPlan,
           boxesToOpen,
           boxStockBefore,
           boxStockAfter: round2(boxStockBefore - boxesToOpen),
           unitsPerBox,
           openedUnits,
+          unitVariantIngressPlan,
           unitStockBefore: stockBefore,
           unitStockAfterOpen: round2(stockBefore + openedUnits)
         };
@@ -8335,6 +8367,10 @@ async function registerSaleFirebase(payload) {
         REFERENCIA: "APERTURA_CAJA_X20",
         NOTA: `Apertura automatica para ${product.nombre || product.NOMBRE || productId} | ${movementReference}`
       });
+      if (autoOpenPlan.boxVariantPlan) {
+        boxMovementApi.ID_VARIANTE = autoOpenPlan.boxVariantPlan.variantId;
+        boxMovementApi.VARIANTE = autoOpenPlan.boxVariantPlan.variantName;
+      }
       movementDocs.push({
         ...boxMovementApi,
         id: `kardex-${movementNumber}`,
@@ -8343,6 +8379,8 @@ async function registerSaleFirebase(payload) {
         productDocId: autoOpenPlan.boxEntry.ref.id,
         saleLegacyId: String(saleNumber),
         saleDocId: `venta-${saleNumber}`,
+        variantId: autoOpenPlan.boxVariantPlan?.variantId || "",
+        variantName: autoOpenPlan.boxVariantPlan?.variantName || "",
         createdAt: nowIso(),
         migratedAt: ""
       });
@@ -8362,6 +8400,10 @@ async function registerSaleFirebase(payload) {
         REFERENCIA: "APERTURA_CAJA_X20",
         NOTA: `Ingreso automatico desde ${autoOpenPlan.boxName} | ${movementReference}`
       });
+      if (autoOpenPlan.unitVariantIngressPlan) {
+        unitIngressApi.ID_VARIANTE = autoOpenPlan.unitVariantIngressPlan.variantId;
+        unitIngressApi.VARIANTE = autoOpenPlan.unitVariantIngressPlan.variantName;
+      }
       movementDocs.push({
         ...unitIngressApi,
         id: `kardex-${movementNumber}`,
@@ -8370,6 +8412,8 @@ async function registerSaleFirebase(payload) {
         productDocId: productEntry.ref.id,
         saleLegacyId: String(saleNumber),
         saleDocId: `venta-${saleNumber}`,
+        variantId: autoOpenPlan.unitVariantIngressPlan?.variantId || "",
+        variantName: autoOpenPlan.unitVariantIngressPlan?.variantName || "",
         createdAt: nowIso(),
         migratedAt: ""
       });
@@ -8414,10 +8458,12 @@ async function registerSaleFirebase(payload) {
     };
     if (variantPlan) productPatch.variantes = variantPlan.variants;
     if (autoOpenPlan) {
-      transaction.update(autoOpenPlan.boxEntry.ref, {
+      const boxPatch = {
         stockActual: autoOpenPlan.boxStockAfter,
         updatedAt: nowIso()
-      });
+      };
+      if (autoOpenPlan.boxVariantPlan) boxPatch.variantes = autoOpenPlan.boxVariantPlan.variants;
+      transaction.update(autoOpenPlan.boxEntry.ref, boxPatch);
     }
     transaction.update(productEntry.ref, productPatch);
     transaction.set(db.collection(firebaseCollectionName("sales")).doc(saleDoc.id), cleanForFirestore(saleDoc), { merge: true });

@@ -27965,6 +27965,7 @@ body.product-detail-lock {
 }
 
 .admin-delivery-finance-modal input,
+.admin-delivery-finance-modal select,
 .admin-delivery-finance-modal textarea,
 .admin-delivery-income-filters input,
 .admin-delivery-income-filters select {
@@ -27997,6 +27998,20 @@ body.product-detail-lock {
 .admin-delivery-finance-actions button[type="submit"] {
   border-color: #ffc846;
   background: #ffc846;
+}
+
+.admin-delivery-finance-actions button.is-danger {
+  border-color: #b42318;
+  color: #fff;
+  background: #c6281d;
+}
+
+.admin-cancel-order-warning {
+  margin: 10px 0 0;
+  color: #7c2d12;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 /* Product detail color pass: align modal with related product card palette. */
