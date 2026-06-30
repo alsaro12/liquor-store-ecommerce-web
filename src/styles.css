@@ -22155,6 +22155,58 @@ button.checkout-combo-toggle[aria-expanded="true"] > b::before {
   flex-direction: column;
 }
 
+.react-admin-cigarette-link-rules {
+  display: grid;
+  gap: 12px;
+}
+
+.react-admin-cigarette-link-rule {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(15, 118, 110, 0.15);
+  border-radius: 16px;
+  background: #f8fbff;
+}
+
+.react-admin-cigarette-link-rule-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 2px;
+}
+
+.react-admin-cigarette-link-rule-head strong {
+  color: #10233b;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.react-admin-cigarette-link-rule-head button {
+  min-height: 28px;
+  border: 1px solid rgba(180, 35, 24, 0.2);
+  border-radius: 999px;
+  padding: 0 10px;
+  color: #b42318;
+  background: #fff1ef;
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.react-admin-cigarette-link-rules .react-admin-link-soft {
+  justify-self: start;
+}
+
+@media (max-width: 720px) {
+  .react-admin-cigarette-link-rule {
+    grid-template-columns: 1fr;
+  }
+}
+
 .admin-order-card.is-entregado,
 .admin-order-card.is-rechazado,
 .admin-order-card.is-cancelado {

@@ -3854,22 +3854,64 @@ function firebaseProductToApi(row) {
   });
 }
 
-function normalizeCigaretteStockLink(value) {
+function normalizeCigaretteStockRule(value) {
   const source = value && typeof value === "object" ? value : {};
   const unitProductId = trimValue(source.unitProductId ?? source.unit_product_id ?? "");
   const unitVariantId = trimValue(source.unitVariantId ?? source.unit_variant_id ?? "");
   const box20ProductId = trimValue(source.box20ProductId ?? source.box20_product_id ?? "");
   const box20VariantId = trimValue(source.box20VariantId ?? source.box20_variant_id ?? "");
   const sameTarget = unitProductId === box20ProductId && (!unitVariantId || !box20VariantId || unitVariantId === box20VariantId);
-  const enabled = source.enabled === true && unitProductId && box20ProductId && !sameTarget;
   return cleanForFirestore({
-    enabled: Boolean(enabled),
+    enabled: Boolean(unitProductId && box20ProductId && !sameTarget),
     unitProductId,
     unitVariantId,
     box20ProductId,
     box20VariantId,
     unitsPerBox: 20
   });
+}
+
+function normalizeCigaretteStockLink(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const legacyRule = normalizeCigaretteStockRule(source);
+  const sourceRules = Array.isArray(source.rules)
+    ? source.rules
+    : Array.isArray(source.reglas)
+      ? source.reglas
+      : [];
+  const rules = sourceRules
+    .map(normalizeCigaretteStockRule)
+    .filter((rule) => rule.enabled);
+  if (!rules.length && legacyRule.enabled) {
+    rules.push(legacyRule);
+  }
+  const enabled = source.enabled === true && rules.length > 0;
+  const firstRule = rules[0] || legacyRule;
+  return cleanForFirestore({
+    enabled: Boolean(enabled),
+    unitProductId: firstRule.unitProductId || "",
+    unitVariantId: firstRule.unitVariantId || "",
+    box20ProductId: firstRule.box20ProductId || "",
+    box20VariantId: firstRule.box20VariantId || "",
+    rules: enabled ? rules : [],
+    unitsPerBox: 20
+  });
+}
+
+function selectCigaretteStockLinkRule(stockLink, productId, saleVariantState) {
+  const normalized = normalizeCigaretteStockLink(stockLink);
+  if (!normalized.enabled) return null;
+  const rules = Array.isArray(normalized.rules) && normalized.rules.length ? normalized.rules : [normalized];
+  const candidates = rules.filter((rule) => {
+    if (parseCartProductId(rule.unitProductId) !== productId) return false;
+    return !rule.unitVariantId || !saleVariantState || rule.unitVariantId === saleVariantState.variantId;
+  });
+  if (!candidates.length) return null;
+  if (saleVariantState) {
+    const exact = candidates.find((rule) => rule.unitVariantId === saleVariantState.variantId);
+    if (exact) return exact;
+  }
+  return candidates.find((rule) => !rule.unitVariantId) || candidates[0];
 }
 
 function slugifyDocumentId(value) {
@@ -8265,10 +8307,9 @@ async function registerSaleFirebase(payload) {
     const saleVariantState = getProductVariantState(product, variantId);
     const availableBeforeSale = saleVariantState ? saleVariantState.variantStockBefore : stockBefore;
     if (cigarettePresentation?.id === "unit" && availableBeforeSale < reportQuantity) {
-      const stockLink = normalizeCigaretteStockLink(product.cigaretteStockLink);
-      const unitVariantMatches = !stockLink.unitVariantId || !saleVariantState || stockLink.unitVariantId === saleVariantState.variantId;
-      if (stockLink.enabled && unitVariantMatches && parseCartProductId(stockLink.unitProductId) === productId) {
-        const boxProductId = parseCartProductId(stockLink.box20ProductId);
+      const stockLinkRule = selectCigaretteStockLinkRule(product.cigaretteStockLink, productId, saleVariantState);
+      if (stockLinkRule) {
+        const boxProductId = parseCartProductId(stockLinkRule.box20ProductId);
         const boxEntry = await findFirebaseProductByLegacyId(boxProductId);
         if (!boxEntry) throw createHttpError(404, `No existe la caja x20 enlazada N° ${boxProductId}.`);
         const boxSnap = await transaction.get(boxEntry.ref);
@@ -8277,7 +8318,7 @@ async function registerSaleFirebase(payload) {
         const unitsNeeded = round2(reportQuantity - availableBeforeSale);
         const boxesToOpen = Math.ceil(unitsNeeded / unitsPerBox);
         const boxStockBefore = round2(boxProduct.stockActual ?? boxProduct.STOCK_ACTUAL ?? 0);
-        const boxVariantState = getProductVariantState(boxProduct, stockLink.box20VariantId);
+        const boxVariantState = getProductVariantState(boxProduct, stockLinkRule.box20VariantId);
         const boxAvailableBefore = boxVariantState ? boxVariantState.variantStockBefore : boxStockBefore;
         if (boxAvailableBefore < boxesToOpen || boxStockBefore < boxesToOpen) {
           throw createHttpError(
