@@ -393,6 +393,7 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
   const [comboProductOptions, setComboProductOptions] = useState([]);
   const [cigaretteLinkModal, setCigaretteLinkModal] = useState({ open: false });
   const [cigaretteLinkDraft, setCigaretteLinkDraft] = useState(emptyCigaretteStockRule());
+  const [cigaretteLinkEditingIndex, setCigaretteLinkEditingIndex] = useState(null);
   const productsCacheRef = useRef(new Map());
   const statsCacheRef = useRef(null);
   const latestProductsLoadRef = useRef(0);
@@ -595,7 +596,9 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
       if (!nextRule.unitProductId || !nextRule.box20ProductId) {
         return current;
       }
-      const nextRules = [...currentLink.rules, nextRule];
+      const nextRules = cigaretteLinkEditingIndex !== null
+        ? currentLink.rules.map((rule, ruleIndex) => (ruleIndex === cigaretteLinkEditingIndex ? nextRule : rule))
+        : [...currentLink.rules, nextRule];
       return {
         ...current,
         cigaretteStockLink: {
@@ -607,9 +610,22 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
       };
     });
     setCigaretteLinkDraft(emptyCigaretteStockRule());
+    setCigaretteLinkEditingIndex(null);
+  }
+
+  function editCigaretteStockLinkRule(index) {
+    const rule = cigaretteStockLink.rules[index];
+    if (!rule) return;
+    setCigaretteLinkDraft({
+      ...emptyCigaretteStockRule(),
+      ...rule,
+      unitsPerBox: 20
+    });
+    setCigaretteLinkEditingIndex(index);
   }
 
   function removeCigaretteStockLinkRule(index) {
+    const wasEditingRemovedRule = cigaretteLinkEditingIndex === index;
     setForm((current) => {
       const currentLink = normalizeCigaretteStockLink(current.cigaretteStockLink);
       const nextRules = currentLink.rules.filter((_, ruleIndex) => ruleIndex !== index);
@@ -623,6 +639,25 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
         }
       };
     });
+    setCigaretteLinkEditingIndex((currentIndex) => {
+      if (currentIndex === null) return null;
+      if (currentIndex === index) return null;
+      return currentIndex > index ? currentIndex - 1 : currentIndex;
+    });
+    if (wasEditingRemovedRule) {
+      setCigaretteLinkDraft(emptyCigaretteStockRule());
+    }
+  }
+
+  function buildCigaretteStockLinkRulesWithDraft(baseRules = []) {
+    const draftRule = normalizeCigaretteStockLink({ rules: [cigaretteLinkDraft] }).rules[0] || emptyCigaretteStockRule();
+    if (!draftRule.unitProductId || !draftRule.box20ProductId) {
+      return baseRules;
+    }
+    if (cigaretteLinkEditingIndex !== null) {
+      return baseRules.map((rule, ruleIndex) => (ruleIndex === cigaretteLinkEditingIndex ? draftRule : rule));
+    }
+    return [...baseRules, draftRule];
   }
 
   function openCreateComboModal() {
@@ -785,6 +820,7 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
 
   function openCigaretteLinkModal() {
     setCigaretteLinkDraft(emptyCigaretteStockRule());
+    setCigaretteLinkEditingIndex(null);
     setCigaretteLinkModal({ open: true });
   }
 
@@ -1413,15 +1449,25 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                 <span className="react-admin-filter-kicker">Cigarros</span>
                 <h3>Enlazar stock automático</h3>
               </div>
-              <button type="button" className="react-admin-icon-close" onClick={() => setCigaretteLinkModal({ open: false })}>×</button>
+              <button
+                type="button"
+                className="react-admin-icon-close"
+                onClick={() => {
+                  setCigaretteLinkDraft(emptyCigaretteStockRule());
+                  setCigaretteLinkEditingIndex(null);
+                  setCigaretteLinkModal({ open: false });
+                }}
+              >
+                ×
+              </button>
             </div>
             <div className="react-admin-form-grid">
               <div className="react-admin-cigarette-link-rules is-span-2">
                 <div className="react-admin-cigarette-link-rule">
                   <div className="react-admin-cigarette-link-rule-head">
-                    <strong>Regla nueva</strong>
+                    <strong>{cigaretteLinkEditingIndex === null ? "Regla nueva" : `Editando regla ${cigaretteLinkEditingIndex + 1}`}</strong>
                     <button type="button" className="is-danger" onClick={addCigaretteStockLinkRule} disabled={!cigaretteLinkDraft.unitProductId || !cigaretteLinkDraft.box20ProductId}>
-                      Agregar regla
+                      {cigaretteLinkEditingIndex === null ? "+ Agregar regla" : "Actualizar regla"}
                     </button>
                   </div>
                   <label>
@@ -1499,9 +1545,14 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                       <div key={`cigarette-rule-${ruleIndex}`} className="react-admin-cigarette-link-rule is-saved">
                         <div className="react-admin-cigarette-link-rule-head">
                           <strong>Regla {ruleIndex + 1}</strong>
-                          <button type="button" className="is-danger" onClick={() => removeCigaretteStockLinkRule(ruleIndex)}>
-                            Quitar
-                          </button>
+                          <span className="react-admin-cigarette-link-rule-actions">
+                            <button type="button" onClick={() => editCigaretteStockLinkRule(ruleIndex)}>
+                              Editar
+                            </button>
+                            <button type="button" className="is-danger" onClick={() => removeCigaretteStockLinkRule(ruleIndex)}>
+                              Quitar
+                            </button>
+                          </span>
                         </div>
                         <div className="react-admin-cigarette-link-rule-summary">
                           <div>
@@ -1547,6 +1598,7 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                   onClick={() => {
                     updateCigaretteStockLink({ enabled: false, unitProductId: "", unitVariantId: "", box20ProductId: "", box20VariantId: "", rules: [] });
                     setCigaretteLinkDraft(emptyCigaretteStockRule());
+                    setCigaretteLinkEditingIndex(null);
                     setCigaretteLinkModal({ open: false });
                   }}
                 >
@@ -1556,17 +1608,14 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                   type="button"
                   className="react-admin-link"
                   onClick={() => {
-                    const draftRule = normalizeCigaretteStockLink({ rules: [cigaretteLinkDraft] }).rules[0] || emptyCigaretteStockRule();
-                    const rules = [...cigaretteStockLink.rules];
-                    if (draftRule.unitProductId && draftRule.box20ProductId) {
-                      rules.push(draftRule);
-                    }
+                    const rules = buildCigaretteStockLinkRulesWithDraft([...cigaretteStockLink.rules]);
                     updateCigaretteStockLink({
                       ...(rules[0] || emptyCigaretteStockRule()),
                       enabled: Boolean(rules.length),
                       rules
                     });
                     setCigaretteLinkDraft(emptyCigaretteStockRule());
+                    setCigaretteLinkEditingIndex(null);
                     setCigaretteLinkModal({ open: false });
                   }}
                 >

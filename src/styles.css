@@ -22197,6 +22197,18 @@ button.checkout-combo-toggle[aria-expanded="true"] > b::before {
   text-transform: uppercase;
 }
 
+.react-admin-cigarette-link-rule-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.react-admin-cigarette-link-rule-actions button:not(.is-danger) {
+  color: #0f766e;
+  background: #eefcf8;
+  border-color: rgba(15, 118, 110, 0.18);
+}
+
 .react-admin-cigarette-link-rules .react-admin-link-soft {
   justify-self: start;
 }
