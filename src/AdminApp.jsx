@@ -3,6 +3,7 @@ import AdminKardexPage from "./modules/admin/AdminKardexPage.jsx";
 import AdminDeliveryPage from "./modules/admin/AdminDeliveryPage.jsx";
 import AdminDeliveryIncomePage from "./modules/admin/AdminDeliveryIncomePage.jsx";
 import AdminCouponsPage from "./modules/admin/AdminCouponsPage.jsx";
+import AdminOpinionesPage from "./modules/admin/AdminOpinionesPage.jsx";
 import AdminOrdersPage from "./modules/admin/AdminOrdersPage.jsx";
 import AdminProductsPage from "./modules/admin/AdminProductsPage.jsx";
 import AdminSalesPage from "./modules/admin/AdminSalesPage.jsx";
@@ -44,6 +45,11 @@ const MODULES = {
     badge: "Admin React - descuentos",
     description: "Crea, edita y controla códigos de descuento con vigencia y unidades disponibles."
   },
+  opiniones: {
+    title: "Opiniones",
+    badge: "Admin React - feedback",
+    description: "Revisa comentarios enviados por clientes desde la plataforma."
+  },
   products: {
     title: "Gestion de productos",
     badge: "Admin React - productos",
@@ -66,6 +72,7 @@ const ADMIN_NAV = [
   { key: "orders", label: "Control de pedidos", icon: "⇄" },
   { key: "deliveryIncome", label: "Ingresos delivery", icon: "$" },
   { key: "coupons", label: "Cupones", icon: "%" },
+  { key: "opiniones", label: "Opiniones", icon: "✎" },
   { key: "delivery", label: "Tienda y delivery", icon: "⌖" },
   { key: "products", label: "Productos", icon: "◫" },
   { key: "kardex", label: "Kardex", icon: "≡" },
@@ -405,6 +412,8 @@ export default function AdminApp() {
             <AdminDeliveryIncomePage />
           ) : currentView === "coupons" ? (
             <AdminCouponsPage />
+          ) : currentView === "opiniones" ? (
+            <AdminOpinionesPage />
           ) : currentView === "delivery" ? (
             <AdminDeliveryPage />
           ) : currentView === "products" ? (

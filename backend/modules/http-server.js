@@ -24,6 +24,7 @@ const { createDireccionesObjectServer } = require("../objects/direcciones/server
 const { createFavoritosObjectServer } = require("../objects/favoritos/server");
 const { createMetodosPagoObjectServer } = require("../objects/metodos-pago/server");
 const { createNotificacionesObjectServer } = require("../objects/notificaciones/server");
+const { createOpinionesObjectServer } = require("../objects/opiniones/server");
 const { createPromosObjectServer } = require("../objects/promos/server");
 const { createReferidosObjectServer } = require("../objects/referidos/server");
 const { createOrdersObjectServer } = require("../objects/orders/server");
@@ -64,6 +65,7 @@ const DIST_ROOT = path.join(PROJECT_DIR, "dist");
 const PRODUCT_IMAGE_UPLOAD_DIR = path.join(PROJECT_DIR, "uploads", "product-images");
 const ORDERS_DB_PATH = path.join(PROJECT_DIR, "local-db", "orders.json");
 const NOTIFICATIONS_DB_PATH = path.join(PROJECT_DIR, "local-db", "notificaciones.json");
+const OPINIONES_DB_PATH = path.join(PROJECT_DIR, "local-db", "opiniones.json");
 const COMBOS_DB_PATH = path.join(PROJECT_DIR, "local-db", "combos.json");
 const CUSTOMERS_DB_PATH = path.join(PROJECT_DIR, "local-db", "customers.json");
 const STORE_DELIVERY_CONFIG_PATH = path.join(PROJECT_DIR, "local-db", "store-delivery-config.json");
@@ -2746,7 +2748,7 @@ function setApiCorsHeaders(req, res) {
     res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
     res.setHeader("Vary", "Origin");
   }
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
 }
@@ -7510,6 +7512,137 @@ async function markAllNotificacionesLeidas(usuarioId) {
   return markAllLocalNotificacionesLeidas(usuarioId);
 }
 
+// ============================================================
+// OPINIONES (storefront feedback)
+// ============================================================
+
+const OPINION_STATUSES = new Set(["nueva", "revisada", "archivada"]);
+
+function normalizeOpinionStatus(value, fallback = "nueva") {
+  const status = normalizeText(value || fallback);
+  return OPINION_STATUSES.has(status) ? status : fallback;
+}
+
+function buildOpinionShape(row) {
+  return {
+    id: trimValue(row?.id || ""),
+    usuarioId: trimValue(row?.usuarioId ?? row?.usuario_id ?? ""),
+    nombre: trimValue(row?.nombre || ""),
+    telefono: trimValue(row?.telefono || ""),
+    email: trimValue(row?.email || ""),
+    comentario: trimValue(row?.comentario || ""),
+    status: normalizeOpinionStatus(row?.status),
+    sourceRoute: trimValue(row?.sourceRoute || ""),
+    createdAt: row?.createdAt ? new Date(row.createdAt).toISOString() : null,
+    updatedAt: row?.updatedAt ? new Date(row.updatedAt).toISOString() : null,
+    reviewedAt: row?.reviewedAt ? new Date(row.reviewedAt).toISOString() : null,
+    reviewedBy: row?.reviewedBy ? trimValue(row.reviewedBy) : ""
+  };
+}
+
+async function readOpinionesStore() {
+  try {
+    const remote = await readFirebaseCollection("opiniones");
+    if (Array.isArray(remote)) return remote;
+  } catch (error) {
+    await appendLog("WARN", "Fallback local de opiniones", {
+      operation: "readOpinionesStore",
+      message: buildDbErrorMessage(error)
+    });
+  }
+  try {
+    const raw = await fs.readFile(OPINIONES_DB_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    if (error?.code === "ENOENT") return [];
+    throw error;
+  }
+}
+
+async function writeOpinionesStore(items) {
+  const list = Array.isArray(items) ? items : [];
+  try {
+    if (await writeFirebaseCollection("opiniones", list)) return;
+  } catch (error) {
+    await appendLog("WARN", "Fallback local de opiniones", {
+      operation: "writeOpinionesStore",
+      message: buildDbErrorMessage(error)
+    });
+  }
+  await fs.mkdir(path.dirname(OPINIONES_DB_PATH), { recursive: true });
+  await fs.writeFile(OPINIONES_DB_PATH, JSON.stringify(list, null, 2), "utf8");
+}
+
+function buildOpinionUserSnapshot(user) {
+  return {
+    usuarioId: trimValue(user?.id || ""),
+    nombre: trimValue(user?.nombre || ""),
+    telefono: trimValue(user?.telefono || ""),
+    email: trimValue(user?.email || "")
+  };
+}
+
+async function createOpinion(user, payload) {
+  const comentario = trimValue(payload?.comentario || "");
+  if (comentario.length < 5) throw createHttpError(400, "La opinión debe tener al menos 5 caracteres.");
+  if (comentario.length > 2000) throw createHttpError(400, "La opinión no puede superar 2000 caracteres.");
+
+  const current = await readOpinionesStore();
+  const id = `opinion-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
+  const item = {
+    id,
+    ...buildOpinionUserSnapshot(user),
+    comentario,
+    status: "nueva",
+    sourceRoute: trimValue(payload?.sourceRoute || "").slice(0, 255),
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+    reviewedAt: "",
+    reviewedBy: ""
+  };
+  current.unshift(item);
+  await writeOpinionesStore(current);
+  return buildOpinionShape(item);
+}
+
+async function listOpiniones({ status = "" } = {}) {
+  const statusFilter = normalizeOpinionStatus(status, "");
+  const items = await readOpinionesStore();
+  return items
+    .map(buildOpinionShape)
+    .filter((item) => !statusFilter || item.status === statusFilter)
+    .sort((left, right) => {
+      if (left.status === "nueva" && right.status !== "nueva") return -1;
+      if (left.status !== "nueva" && right.status === "nueva") return 1;
+      return String(right.createdAt || "").localeCompare(String(left.createdAt || ""));
+    });
+}
+
+async function updateOpinionStatus(id, payload, staffUser) {
+  const safeId = trimValue(id || "");
+  const nextStatus = normalizeOpinionStatus(payload?.status, "");
+  if (!safeId) throw createHttpError(400, "Falta el identificador de la opinión.");
+  if (!nextStatus) throw createHttpError(400, "Estado de opinión inválido.");
+
+  const current = await readOpinionesStore();
+  let updated = null;
+  const next = current.map((item) => {
+    if (trimValue(item?.id || "") !== safeId) return item;
+    updated = {
+      ...item,
+      status: nextStatus,
+      updatedAt: nowIso(),
+      reviewedAt: nextStatus === "nueva" ? "" : nowIso(),
+      reviewedBy: nextStatus === "nueva" ? "" : trimValue(staffUser?.nombre || staffUser?.email || staffUser?.telefono || staffUser?.id || "")
+    };
+    return updated;
+  });
+  if (!updated) throw createHttpError(404, "Opinión no encontrada.");
+  await writeOpinionesStore(next);
+  return buildOpinionShape(updated);
+}
+
 function productImageRowToApi(row) {
   return normalizeProductImages([
     {
@@ -11460,6 +11593,16 @@ const API_OBJECT_ROUTE_HANDLERS = [
     countUnreadNotificaciones,
     markNotificacionLeida,
     markAllNotificacionesLeidas
+  }),
+  createOpinionesObjectServer({
+    sendText,
+    sendJson,
+    parseJsonBody,
+    requireCustomer,
+    requireStaff,
+    createOpinion,
+    listOpiniones,
+    updateOpinionStatus
   }),
   createReferidosObjectServer({
     sendText,

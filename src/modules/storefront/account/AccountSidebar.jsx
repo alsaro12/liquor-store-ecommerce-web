@@ -5,7 +5,8 @@ const NAV = [
   { key: "favoritos", label: "Mis favoritos", shortLabel: "Favoritos", icon: "♡" },
   { key: "direcciones", label: "Mis direcciones", shortLabel: "Direcc.", icon: "⌖" },
   { key: "pagos", label: "Cómo pagar", shortLabel: "Pagos", icon: "💳" },
-  { key: "notificaciones", label: "Notificaciones", shortLabel: "Avisos", icon: "🔔" }
+  { key: "notificaciones", label: "Notificaciones", shortLabel: "Avisos", icon: "🔔" },
+  { key: "opinion", label: "Cuéntanos tu opinión", shortLabel: "Opinión", icon: "💬" }
 ];
 
 function initialOf(user) {
