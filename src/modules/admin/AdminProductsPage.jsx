@@ -7,6 +7,7 @@ import {
   inactivateProduct,
   loadCombosAll,
   loadProductsPage,
+  loadProductsAll,
   loadProductsStats,
   loadRuntimeStatus,
   registerProductIngress,
@@ -486,9 +487,9 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
   }, []);
 
   useEffect(() => {
-    loadProductsPage({ page: 1, pageSize: 5000, sortBy: "N°", sortDir: "asc" })
+    loadProductsAll()
       .then((pageData) => {
-        const nextItems = Array.isArray(pageData?.items) ? pageData.items.map(normalizeProduct) : [];
+        const nextItems = Array.isArray(pageData?.items) ? pageData.items.map(normalizeProduct) : Array.isArray(pageData) ? pageData.map(normalizeProduct) : [];
         setComboProductOptions(nextItems);
       })
       .catch(() => {

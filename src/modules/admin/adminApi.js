@@ -291,6 +291,10 @@ export function loadProductsPage(params = {}) {
   return requestJson(`/api/productos?${query.toString()}`);
 }
 
+export function loadProductsAll() {
+  return requestJson("/api/productos/all");
+}
+
 export function loadCombosAll() {
   return requestJson("/api/combos");
 }
