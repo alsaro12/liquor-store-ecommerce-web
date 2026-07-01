@@ -391,6 +391,7 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
   const [comboImageState, setComboImageState] = useState({ processing: false, error: "" });
   const [comboProductOptions, setComboProductOptions] = useState([]);
   const [cigaretteLinkModal, setCigaretteLinkModal] = useState({ open: false });
+  const [cigaretteLinkDraft, setCigaretteLinkDraft] = useState(emptyCigaretteStockRule());
   const productsCacheRef = useRef(new Map());
   const statsCacheRef = useRef(null);
   const latestProductsLoadRef = useRef(0);
@@ -578,54 +579,46 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
     }));
   }
 
-  function updateCigaretteStockLinkRule(index, patch) {
-    setForm((current) => {
-      const currentLink = normalizeCigaretteStockLink(current.cigaretteStockLink);
-      const rules = currentLink.rules.length ? currentLink.rules : [emptyCigaretteStockRule()];
-      const nextRules = rules.map((rule, ruleIndex) => (
-        ruleIndex === index ? { ...rule, ...patch, unitsPerBox: 20 } : rule
-      ));
-      return {
-        ...current,
-        cigaretteStockLink: {
-          ...currentLink,
-          ...nextRules[0],
-          enabled: nextRules.some((rule) => rule.unitProductId && rule.box20ProductId),
-          rules: nextRules
-        }
-      };
-    });
+  function updateCigaretteStockLinkRule(patch) {
+    setCigaretteLinkDraft((current) => ({
+      ...current,
+      ...patch,
+      unitsPerBox: 20
+    }));
   }
 
   function addCigaretteStockLinkRule() {
     setForm((current) => {
       const currentLink = normalizeCigaretteStockLink(current.cigaretteStockLink);
-      const nextRules = [...(currentLink.rules.length ? currentLink.rules : [emptyCigaretteStockRule()]), emptyCigaretteStockRule()];
+      const nextRule = normalizeCigaretteStockLink({ rules: [cigaretteLinkDraft] }).rules[0] || emptyCigaretteStockRule();
+      if (!nextRule.unitProductId || !nextRule.box20ProductId) {
+        return current;
+      }
+      const nextRules = [...currentLink.rules, nextRule];
       return {
         ...current,
         cigaretteStockLink: {
           ...currentLink,
           ...nextRules[0],
-          enabled: nextRules.some((rule) => rule.unitProductId && rule.box20ProductId),
+          enabled: true,
           rules: nextRules
         }
       };
     });
+    setCigaretteLinkDraft(emptyCigaretteStockRule());
   }
 
   function removeCigaretteStockLinkRule(index) {
     setForm((current) => {
       const currentLink = normalizeCigaretteStockLink(current.cigaretteStockLink);
-      const nextRules = (currentLink.rules.length ? currentLink.rules : [emptyCigaretteStockRule()])
-        .filter((_, ruleIndex) => ruleIndex !== index);
-      const safeRules = nextRules.length ? nextRules : [emptyCigaretteStockRule()];
+      const nextRules = currentLink.rules.filter((_, ruleIndex) => ruleIndex !== index);
       return {
         ...current,
         cigaretteStockLink: {
           ...currentLink,
-          ...safeRules[0],
-          enabled: safeRules.some((rule) => rule.unitProductId && rule.box20ProductId),
-          rules: safeRules
+          ...(nextRules[0] || emptyCigaretteStockRule()),
+          enabled: Boolean(nextRules.length),
+          rules: nextRules
         }
       };
     });
@@ -787,6 +780,11 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
   function closeProductModal() {
     setModal({ open: false, mode: "create", saving: false });
     setImageState({ processing: false, error: "" });
+  }
+
+  function openCigaretteLinkModal() {
+    setCigaretteLinkDraft(emptyCigaretteStockRule());
+    setCigaretteLinkModal({ open: true });
   }
 
   async function handleProductImageSelection(event) {
@@ -1231,7 +1229,7 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                           : "Sin enlace automático"}
                       </small>
                     </div>
-                    <button type="button" onClick={() => setCigaretteLinkModal({ open: true })}>
+                    <button type="button" onClick={openCigaretteLinkModal}>
                       Enlazar stock
                     </button>
                   </div>
@@ -1418,89 +1416,124 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
             </div>
             <div className="react-admin-form-grid">
               <div className="react-admin-cigarette-link-rules is-span-2">
-                {(cigaretteStockLink.rules.length ? cigaretteStockLink.rules : [emptyCigaretteStockRule()]).map((rule, ruleIndex) => {
-                  const unitProduct = findAdminProductOption(cigaretteProductOptions, rule.unitProductId);
-                  const box20Product = findAdminProductOption(cigaretteProductOptions, rule.box20ProductId);
-                  const unitVariants = adminProductVariants(unitProduct);
-                  const box20Variants = adminProductVariants(box20Product);
-                  return (
-                    <div key={`cigarette-rule-${ruleIndex}`} className="react-admin-cigarette-link-rule">
-                      <div className="react-admin-cigarette-link-rule-head">
-                        <strong>Regla {ruleIndex + 1}</strong>
-                        <button type="button" className="is-danger" onClick={() => removeCigaretteStockLinkRule(ruleIndex)}>
-                          Quitar
-                        </button>
+                <div className="react-admin-cigarette-link-rule">
+                  <div className="react-admin-cigarette-link-rule-head">
+                    <strong>Regla nueva</strong>
+                    <button type="button" className="is-danger" onClick={addCigaretteStockLinkRule} disabled={!cigaretteLinkDraft.unitProductId || !cigaretteLinkDraft.box20ProductId}>
+                      Agregar regla
+                    </button>
+                  </div>
+                  <label>
+                    Producto unidad
+                    <select
+                      value={cigaretteLinkDraft.unitProductId}
+                      onChange={(event) => updateCigaretteStockLinkRule({
+                        unitProductId: event.target.value,
+                        unitVariantId: ""
+                      })}
+                    >
+                      <option value="">Selecciona unidad</option>
+                      {cigaretteProductOptions.map((product) => (
+                        <option key={`draft-unit-${product.id}`} value={product.code || product.id}>
+                          {product.code || product.id} · {product.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Variante unidad
+                    <select
+                      value={cigaretteLinkDraft.unitVariantId}
+                      onChange={(event) => updateCigaretteStockLinkRule({ unitVariantId: event.target.value })}
+                      disabled={!adminProductVariants(findAdminProductOption(cigaretteProductOptions, cigaretteLinkDraft.unitProductId)).length}
+                    >
+                      <option value="">Sin variante especifica</option>
+                      {adminProductVariants(findAdminProductOption(cigaretteProductOptions, cigaretteLinkDraft.unitProductId)).map((variant) => (
+                        <option key={`draft-unit-variant-${variant.id}`} value={variant.id}>
+                          {variant.name || variant.id} · stock {variant.stock ?? 0}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Producto caja x20
+                    <select
+                      value={cigaretteLinkDraft.box20ProductId}
+                      onChange={(event) => updateCigaretteStockLinkRule({
+                        box20ProductId: event.target.value,
+                        box20VariantId: ""
+                      })}
+                    >
+                      <option value="">Selecciona caja x20</option>
+                      {cigaretteProductOptions.map((product) => (
+                        <option key={`draft-box20-${product.id}`} value={product.code || product.id}>
+                          {product.code || product.id} · {product.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Variante caja x20
+                    <select
+                      value={cigaretteLinkDraft.box20VariantId}
+                      onChange={(event) => updateCigaretteStockLinkRule({ box20VariantId: event.target.value })}
+                      disabled={!adminProductVariants(findAdminProductOption(cigaretteProductOptions, cigaretteLinkDraft.box20ProductId)).length}
+                    >
+                      <option value="">Sin variante especifica</option>
+                      {adminProductVariants(findAdminProductOption(cigaretteProductOptions, cigaretteLinkDraft.box20ProductId)).map((variant) => (
+                        <option key={`draft-box20-variant-${variant.id}`} value={variant.id}>
+                          {variant.name || variant.id} · stock {variant.stock ?? 0}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                {cigaretteStockLink.rules.length ? (
+                  cigaretteStockLink.rules.map((rule, ruleIndex) => {
+                    const unitProduct = findAdminProductOption(cigaretteProductOptions, rule.unitProductId);
+                    const box20Product = findAdminProductOption(cigaretteProductOptions, rule.box20ProductId);
+                    const unitVariants = adminProductVariants(unitProduct);
+                    const box20Variants = adminProductVariants(box20Product);
+                    return (
+                      <div key={`cigarette-rule-${ruleIndex}`} className="react-admin-cigarette-link-rule is-saved">
+                        <div className="react-admin-cigarette-link-rule-head">
+                          <strong>Regla {ruleIndex + 1}</strong>
+                          <button type="button" className="is-danger" onClick={() => removeCigaretteStockLinkRule(ruleIndex)}>
+                            Quitar
+                          </button>
+                        </div>
+                        <div className="react-admin-cigarette-link-rule-summary">
+                          <div>
+                            <span>Producto unidad</span>
+                            <strong>{unitProduct ? `${unitProduct.code || unitProduct.id} · ${unitProduct.name}` : "Sin producto"}</strong>
+                          </div>
+                          <div>
+                            <span>Variante unidad</span>
+                            <strong>
+                              {rule.unitVariantId
+                                ? (unitVariants.find((variant) => variant.id === rule.unitVariantId)?.name || rule.unitVariantId)
+                                : "Sin variante especifica"}
+                            </strong>
+                          </div>
+                          <div>
+                            <span>Producto caja x20</span>
+                            <strong>{box20Product ? `${box20Product.code || box20Product.id} · ${box20Product.name}` : "Sin producto"}</strong>
+                          </div>
+                          <div>
+                            <span>Variante caja x20</span>
+                            <strong>
+                              {rule.box20VariantId
+                                ? (box20Variants.find((variant) => variant.id === rule.box20VariantId)?.name || rule.box20VariantId)
+                                : "Sin variante especifica"}
+                            </strong>
+                          </div>
+                        </div>
                       </div>
-                      <label>
-                        Producto unidad
-                        <select
-                          value={rule.unitProductId}
-                          onChange={(event) => updateCigaretteStockLinkRule(ruleIndex, {
-                            unitProductId: event.target.value,
-                            unitVariantId: ""
-                          })}
-                        >
-                          <option value="">Selecciona unidad</option>
-                          {cigaretteProductOptions.map((product) => (
-                            <option key={`unit-${ruleIndex}-${product.id}`} value={product.code || product.id}>
-                              {product.code || product.id} · {product.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        Variante unidad
-                        <select
-                          value={rule.unitVariantId}
-                          onChange={(event) => updateCigaretteStockLinkRule(ruleIndex, { unitVariantId: event.target.value })}
-                          disabled={!unitVariants.length}
-                        >
-                          <option value="">Sin variante especifica</option>
-                          {unitVariants.map((variant) => (
-                            <option key={`unit-variant-${ruleIndex}-${variant.id}`} value={variant.id}>
-                              {variant.name || variant.id} · stock {variant.stock ?? 0}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        Producto caja x20
-                        <select
-                          value={rule.box20ProductId}
-                          onChange={(event) => updateCigaretteStockLinkRule(ruleIndex, {
-                            box20ProductId: event.target.value,
-                            box20VariantId: ""
-                          })}
-                        >
-                          <option value="">Selecciona caja x20</option>
-                          {cigaretteProductOptions.map((product) => (
-                            <option key={`box20-${ruleIndex}-${product.id}`} value={product.code || product.id}>
-                              {product.code || product.id} · {product.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        Variante caja x20
-                        <select
-                          value={rule.box20VariantId}
-                          onChange={(event) => updateCigaretteStockLinkRule(ruleIndex, { box20VariantId: event.target.value })}
-                          disabled={!box20Variants.length}
-                        >
-                          <option value="">Sin variante especifica</option>
-                          {box20Variants.map((variant) => (
-                            <option key={`box20-variant-${ruleIndex}-${variant.id}`} value={variant.id}>
-                              {variant.name || variant.id} · stock {variant.stock ?? 0}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                  );
-                })}
-                <button type="button" className="react-admin-link react-admin-link-soft" onClick={addCigaretteStockLinkRule}>
-                  + Agregar regla
-                </button>
+                    );
+                  })
+                ) : (
+                  <div className="react-admin-image-empty">Aún no hay reglas guardadas.</div>
+                )}
               </div>
               <div className="react-admin-cigarette-link-note is-span-2">
                 <strong>Regla</strong>
@@ -1512,6 +1545,7 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                   className="react-admin-link react-admin-link-soft"
                   onClick={() => {
                     updateCigaretteStockLink({ enabled: false, unitProductId: "", unitVariantId: "", box20ProductId: "", box20VariantId: "", rules: [] });
+                    setCigaretteLinkDraft(emptyCigaretteStockRule());
                     setCigaretteLinkModal({ open: false });
                   }}
                 >
@@ -1521,13 +1555,17 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                   type="button"
                   className="react-admin-link"
                   onClick={() => {
-                    const rules = (cigaretteStockLink.rules.length ? cigaretteStockLink.rules : [emptyCigaretteStockRule()])
-                      .filter((rule) => rule.unitProductId && rule.box20ProductId);
+                    const draftRule = normalizeCigaretteStockLink({ rules: [cigaretteLinkDraft] }).rules[0] || emptyCigaretteStockRule();
+                    const rules = [...cigaretteStockLink.rules];
+                    if (draftRule.unitProductId && draftRule.box20ProductId) {
+                      rules.push(draftRule);
+                    }
                     updateCigaretteStockLink({
                       ...(rules[0] || emptyCigaretteStockRule()),
                       enabled: Boolean(rules.length),
                       rules
                     });
+                    setCigaretteLinkDraft(emptyCigaretteStockRule());
                     setCigaretteLinkModal({ open: false });
                   }}
                 >
