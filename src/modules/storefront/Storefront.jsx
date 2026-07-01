@@ -28,6 +28,7 @@ import MisPagosPage from "./pages/MisPagosPage.jsx";
 import NotificacionesPage from "./pages/NotificacionesPage.jsx";
 import MiCuentaPage from "./pages/MiCuentaPage.jsx";
 import MiClubPage from "./pages/MiClubPage.jsx";
+import OpinionPage from "./pages/OpinionPage.jsx";
 import AccountLayout from "./account/AccountLayout.jsx";
 import { useConfirm } from "./common/ConfirmDialog.jsx";
 import { countNoLeidas } from "./notificacionesApi.js";
@@ -2206,6 +2207,22 @@ export default function Storefront() {
             <div className="page-empty">
               <div className="page-empty-icon" aria-hidden="true">🔐</div>
               <h3>Inicia sesión para ver tus notificaciones</h3>
+              <button type="button" className="page-cta" onClick={() => setAccountOpen(true)}>
+                Ingresar
+              </button>
+            </div>
+          </div>
+        )
+      ) : visibleRoute === "opinion" ? (
+        authUser ? (
+          <AccountLayout active="opinion" user={authUser} onNavigate={navigate} onLogout={handleLogout} unreadCount={unreadNotifs}>
+            <OpinionPage user={authUser} />
+          </AccountLayout>
+        ) : (
+          <div className="page-shell">
+            <div className="page-empty">
+              <div className="page-empty-icon" aria-hidden="true">🔐</div>
+              <h3>Inicia sesión para contarnos tu opinión</h3>
               <button type="button" className="page-cta" onClick={() => setAccountOpen(true)}>
                 Ingresar
               </button>
