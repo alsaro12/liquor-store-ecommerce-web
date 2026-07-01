@@ -437,6 +437,18 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
                   Mis pedidos
                 </button>
               ) : null}
+              {authUser ? (
+                <button
+                  type="button"
+                  className="checkout-success-button checkout-success-button-secondary"
+                  onClick={() => {
+                    window.location.href = "/opinion";
+                    onClose?.();
+                  }}
+                >
+                  Cuéntanos tu opinión
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="checkout-success-button checkout-success-button-tertiary"

@@ -235,6 +235,25 @@ export function loadDbStatus() {
   return requestJson("/api/db/status");
 }
 
+export function loadOpinionesAll(status = "") {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  const query = params.toString();
+  return requestJson(`/api/opiniones${query ? `?${query}` : ""}`);
+}
+
+export async function updateOpinionStatus(id, status) {
+  const response = await fetch(buildApiUrl(`/api/opiniones/${encodeURIComponent(id)}`), {
+    method: "PATCH",
+    headers: buildAuthHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ status })
+  });
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response) || "No se pudo actualizar la opinión.");
+  }
+  return response.json();
+}
+
 export function loadStoreDeliveryConfig() {
   return requestJson("/api/store-delivery-config");
 }
