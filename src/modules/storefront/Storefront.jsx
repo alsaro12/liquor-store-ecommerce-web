@@ -1171,20 +1171,21 @@ function ProductGrid({ products, status, loading, refreshing = false, category, 
         </div>
 
         <div className="official-mobile-filter-row" aria-label="Filtros rápidos del catálogo">
-          <label>
-            <span>Categoría</span>
-            <select
-              value={category}
-              onChange={(event) => onCategoryChange(event.target.value)}
-              style={{ "--mobile-select-ch": selectedCategoryLabel.length }}
-            >
-              {CATALOG_SPOTLIGHTS.map((item, index) => (
-                <option key={`mobile-${item.id}-${index}`} value={item.category}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <span className="official-mobile-filter-label">Categoría</span>
+          <div className="official-mobile-category-chips" aria-label="Categorías">
+            {CATALOG_SPOTLIGHTS.map((item, index) => (
+              <button
+                key={`mobile-${item.id}-${index}`}
+                type="button"
+                className={category === item.category ? "is-active" : ""}
+                aria-pressed={category === item.category}
+                onClick={() => onCategoryChange(item.category)}
+              >
+                <span aria-hidden="true">{item.icon}</span>
+                <strong>{item.label}</strong>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="official-catalog-tools" aria-label="Filtros del catálogo">
