@@ -22209,6 +22209,26 @@ button.checkout-combo-toggle[aria-expanded="true"] > b::before {
   border-color: rgba(15, 118, 110, 0.18);
 }
 
+.react-admin-cigarette-link-saved-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 4px;
+}
+
+.react-admin-cigarette-link-saved-head strong,
+.react-admin-cigarette-link-saved-head span {
+  color: #516782;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.react-admin-cigarette-link-saved-head span {
+  color: #0f766e;
+}
+
 .react-admin-cigarette-link-rules .react-admin-link-soft {
   justify-self: start;
 }

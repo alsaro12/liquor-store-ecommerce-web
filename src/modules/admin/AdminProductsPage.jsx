@@ -1467,7 +1467,7 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                   <div className="react-admin-cigarette-link-rule-head">
                     <strong>{cigaretteLinkEditingIndex === null ? "Regla nueva" : `Editando regla ${cigaretteLinkEditingIndex + 1}`}</strong>
                     <button type="button" className="is-danger" onClick={addCigaretteStockLinkRule} disabled={!cigaretteLinkDraft.unitProductId || !cigaretteLinkDraft.box20ProductId}>
-                      {cigaretteLinkEditingIndex === null ? "+ Agregar regla" : "Actualizar regla"}
+                      {cigaretteLinkEditingIndex === null ? "Guardar regla en lista" : "Actualizar regla"}
                     </button>
                   </div>
                   <label>
@@ -1534,6 +1534,10 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                       ))}
                     </select>
                   </label>
+                </div>
+                <div className="react-admin-cigarette-link-saved-head">
+                  <strong>Reglas guardadas</strong>
+                  <span>{cigaretteStockLink.rules.length} regla(s)</span>
                 </div>
                 {cigaretteStockLink.rules.length ? (
                   cigaretteStockLink.rules.map((rule, ruleIndex) => {
