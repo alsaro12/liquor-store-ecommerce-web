@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const YAPE_PHONE = "940189609";
+const YAPE_PHONE = "987227110";
 const PAYMENT_QR_URL = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(YAPE_PHONE)}`;
 const WHATSAPP_MESSAGE = `Hola, ya pague por Yape/Plin al ${YAPE_PHONE}. Te mando la captura del pago.`;
 

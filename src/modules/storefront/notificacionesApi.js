@@ -7,7 +7,7 @@ const LOCAL_NOTIFICATIONS = [
     id: "local-pago",
     tipo: "pedido",
     titulo: "Pago por Yape o Plin",
-    mensaje: "Cuando cierres tu pedido, yapea o plinea al 940189609 y escribe por WhatsApp: ya pague.",
+    mensaje: "Cuando cierres tu pedido, yapea o plinea al 987227110 y escribe por WhatsApp: ya pague.",
     link: "/pagos",
     created_at: new Date().toISOString()
   },

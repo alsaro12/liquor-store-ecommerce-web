@@ -255,7 +255,7 @@ export function OrderDetailContent({ order, productsMap, combos }) {
 
         <article className="order-detail-card">
           <h2>Pago</h2>
-          <p className="order-detail-payment">Yapear al <strong>940189609</strong> para confirmar el pedido.</p>
+          <p className="order-detail-payment">Yapear al <strong>987227110</strong> para confirmar el pedido.</p>
           <dl>
             <div><dt>Subtotal</dt><dd>{formatOrderMoney(normalizedOrder.totals?.subtotal)}</dd></div>
             <div><dt>Delivery</dt><dd>{formatOrderMoney(visibleDelivery)}</dd></div>

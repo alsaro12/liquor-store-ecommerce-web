@@ -1,5 +1,5 @@
-export const ADMIN_WHATSAPP_NUMBER = "51940189609";
-export const YAPE_NUMBER = "940189609";
+export const ADMIN_WHATSAPP_NUMBER = "51987227110";
+export const YAPE_NUMBER = "987227110";
 const ORDER_STORAGE_KEY = "licoreria_order_details_v1";
 
 function publicOrderCode(order) {

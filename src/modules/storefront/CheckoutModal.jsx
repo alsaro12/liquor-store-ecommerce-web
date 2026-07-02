@@ -410,7 +410,7 @@ export default function CheckoutModal({ open, onClose, items, authUser, onSucces
             <div className="checkout-modal-success-icon" aria-hidden="true">🎉</div>
             <h2>Pedido listo para enviar</h2>
             <p>Tu pedido <strong>#{successCode}</strong> fue registrado.</p>
-            <p className="checkout-modal-meta">Se abrió WhatsApp con el resumen listo. Recuerda yapear {formatMoney(total)} al 940189609 para confirmar.</p>
+            <p className="checkout-modal-meta">Se abrió WhatsApp con el resumen listo. Recuerda yapear {formatMoney(total)} al 987227110 para confirmar.</p>
             <div className="checkout-modal-success-actions">
               <button
                 type="button"
