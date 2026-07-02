@@ -17,7 +17,7 @@ const TABS = [
 ];
 
 const STATUS_BADGES = {
-  PENDIENTE: { label: "Pedido recibido", tone: "yellow" },
+  PENDIENTE: { label: "Pedido enviado", tone: "yellow" },
   APROBADO: { label: "Pago aprobado", tone: "yellow" },
   VALIDADO: { label: "Pago aprobado", tone: "yellow" },
   EN_CAMINO: { label: "En camino", tone: "blue" },
@@ -32,7 +32,7 @@ const STATUS_BADGES = {
 };
 
 const TRACK_STEPS = [
-  { key: "PENDIENTE", label: "Pedido recibido" },
+  { key: "PENDIENTE", label: "Pedido enviado" },
   { key: "VALIDADO", label: "Pago aprobado" },
   { key: "EN_CAMINO", label: "En camino" },
   { key: "ENTREGADO", label: "Entregado" }

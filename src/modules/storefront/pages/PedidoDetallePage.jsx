@@ -71,8 +71,8 @@ function normalizeOrderDetail(order) {
 const CUSTOMER_ORDER_STEPS = [
   {
     key: "PENDIENTE",
-    label: "Pedido recibido",
-    message: "Recibimos tu pedido. Estamos revisando el pago."
+    label: "Pedido enviado",
+    message: "Tu pedido fue enviado. Estamos revisando el pago."
   },
   {
     key: "VALIDADO",
