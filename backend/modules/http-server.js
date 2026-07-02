@@ -403,6 +403,7 @@ const DB_STATUS_ENV_KEYS = [
 const PAYMENT_TYPES = ["Efectivo", "Yape", "Pedido Ya", "Rappi", "IZIPAY"];
 const PRODUCT_STATUSES = ["ACTIVO", "INACTIVO"];
 const CIGARETTE_BOX_UNITS = 20;
+const CIGARETTE_MIN_UNIT_STOCK_AFTER_SALE = 10;
 const CIGARETTE_AUTO_OPEN_REFERENCE = "APERTURA_CAJA_AUTOMATICA";
 const CIGARETTE_AUTO_OPEN_REVERT_REFERENCE = "REVERSA_APERTURA_CAJA";
 const REAL_KARDEX_INGRESS_REFERENCES = new Set(["INGRESO_MANUAL", "INGRESO_RECIBO_UI"]);
@@ -676,8 +677,8 @@ function applyProductSaleToState(productStateMap, productId, quantity, variantId
   let workingBoxes = boxStockBefore;
   let boxesOpened = 0;
 
-  // Las unidades nunca deben terminar en cero; si se agotan, se abre otra caja automáticamente.
-  while (round2(workingUnits - saleQuantity) <= 0) {
+  // Las unidades no deben quedar por debajo del colchón mínimo después de vender.
+  while (round2(workingUnits - saleQuantity) < CIGARETTE_MIN_UNIT_STOCK_AFTER_SALE) {
     if (workingBoxes < 1) {
       throw createHttpError(
         400,
@@ -8439,7 +8440,7 @@ async function registerSaleFirebase(payload) {
     let autoOpenPlan = null;
     const saleVariantState = getProductVariantState(product, variantId);
     const availableBeforeSale = saleVariantState ? saleVariantState.variantStockBefore : stockBefore;
-    if (cigarettePresentation?.id === "unit" && availableBeforeSale < reportQuantity) {
+    if (cigarettePresentation?.id === "unit" && round2(availableBeforeSale - reportQuantity) < CIGARETTE_MIN_UNIT_STOCK_AFTER_SALE) {
       const stockLinkRule = selectCigaretteStockLinkRule(product.cigaretteStockLink, productId, saleVariantState);
       if (stockLinkRule) {
         const boxProductId = parseCartProductId(stockLinkRule.box20ProductId);
@@ -8448,7 +8449,7 @@ async function registerSaleFirebase(payload) {
         const boxSnap = await transaction.get(boxEntry.ref);
         const boxProduct = boxSnap.data() || boxEntry.data;
         const unitsPerBox = 20;
-        const unitsNeeded = round2(reportQuantity - availableBeforeSale);
+        const unitsNeeded = round2(reportQuantity + CIGARETTE_MIN_UNIT_STOCK_AFTER_SALE - availableBeforeSale);
         const boxesToOpen = Math.ceil(unitsNeeded / unitsPerBox);
         const boxStockBefore = round2(boxProduct.stockActual ?? boxProduct.STOCK_ACTUAL ?? 0);
         const boxVariantState = getProductVariantState(boxProduct, stockLinkRule.box20VariantId);
