@@ -152,6 +152,71 @@ function findAdminProductOption(products, id) {
   return (Array.isArray(products) ? products : []).find((product) => adminProductOptionId(product) === cleanId) || null;
 }
 
+function ScrollableAdminSelect({ value, placeholder, disabled = false, options = [], onChange }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const selected = options.find((option) => String(option.value) === String(value || ""));
+  const displayText = selected?.label || placeholder;
+
+  useEffect(() => {
+    if (!open) return undefined;
+    function handlePointerDown(event) {
+      if (!rootRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [open]);
+
+  return (
+    <div className={`react-admin-scroll-select${open ? " is-open" : ""}${disabled ? " is-disabled" : ""}`} ref={rootRef}>
+      <button
+        type="button"
+        className="react-admin-scroll-select-trigger"
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span>{displayText}</span>
+        <b aria-hidden="true">v</b>
+      </button>
+      {open ? (
+        <div className="react-admin-scroll-select-menu" role="listbox">
+          <button
+            type="button"
+            className={!value ? "is-active" : ""}
+            role="option"
+            aria-selected={!value}
+            onClick={() => {
+              onChange("");
+              setOpen(false);
+            }}
+          >
+            {placeholder}
+          </button>
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={String(option.value) === String(value || "") ? "is-active" : ""}
+              role="option"
+              aria-selected={String(option.value) === String(value || "")}
+              onClick={() => {
+                onChange(option.value);
+                setOpen(false);
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function normalizeCigarettePresentationsForForm(value, basePrice = 0) {
   const source = Array.isArray(value) ? value : [];
   const rows = EMPTY_FORM.cigarettePresentations.map((preset) => {
@@ -1472,67 +1537,59 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
                   </div>
                   <label>
                     Producto unidad
-                    <select
+                    <ScrollableAdminSelect
                       value={cigaretteLinkDraft.unitProductId}
-                      onChange={(event) => updateCigaretteStockLinkRule({
-                        unitProductId: event.target.value,
+                      placeholder="Selecciona unidad"
+                      options={cigaretteProductOptions.map((product) => ({
+                        value: product.code || product.id,
+                        label: `${product.code || product.id} · ${product.name}`
+                      }))}
+                      onChange={(nextValue) => updateCigaretteStockLinkRule({
+                        unitProductId: nextValue,
                         unitVariantId: ""
                       })}
-                    >
-                      <option value="">Selecciona unidad</option>
-                      {cigaretteProductOptions.map((product) => (
-                        <option key={`draft-unit-${product.id}`} value={product.code || product.id}>
-                          {product.code || product.id} · {product.name}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </label>
                   <label>
                     Variante unidad
-                    <select
+                    <ScrollableAdminSelect
                       value={cigaretteLinkDraft.unitVariantId}
-                      onChange={(event) => updateCigaretteStockLinkRule({ unitVariantId: event.target.value })}
                       disabled={!adminProductVariants(findAdminProductOption(cigaretteProductOptions, cigaretteLinkDraft.unitProductId)).length}
-                    >
-                      <option value="">Sin variante especifica</option>
-                      {adminProductVariants(findAdminProductOption(cigaretteProductOptions, cigaretteLinkDraft.unitProductId)).map((variant) => (
-                        <option key={`draft-unit-variant-${variant.id}`} value={variant.id}>
-                          {variant.name || variant.id} · stock {variant.stock ?? 0}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Sin variante especifica"
+                      options={adminProductVariants(findAdminProductOption(cigaretteProductOptions, cigaretteLinkDraft.unitProductId)).map((variant) => ({
+                        value: variant.id,
+                        label: `${variant.name || variant.id} · stock ${variant.stock ?? 0}`
+                      }))}
+                      onChange={(nextValue) => updateCigaretteStockLinkRule({ unitVariantId: nextValue })}
+                    />
                   </label>
                   <label>
                     Producto caja x20
-                    <select
+                    <ScrollableAdminSelect
                       value={cigaretteLinkDraft.box20ProductId}
-                      onChange={(event) => updateCigaretteStockLinkRule({
-                        box20ProductId: event.target.value,
+                      placeholder="Selecciona caja x20"
+                      options={cigaretteProductOptions.map((product) => ({
+                        value: product.code || product.id,
+                        label: `${product.code || product.id} · ${product.name}`
+                      }))}
+                      onChange={(nextValue) => updateCigaretteStockLinkRule({
+                        box20ProductId: nextValue,
                         box20VariantId: ""
                       })}
-                    >
-                      <option value="">Selecciona caja x20</option>
-                      {cigaretteProductOptions.map((product) => (
-                        <option key={`draft-box20-${product.id}`} value={product.code || product.id}>
-                          {product.code || product.id} · {product.name}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </label>
                   <label>
                     Variante caja x20
-                    <select
+                    <ScrollableAdminSelect
                       value={cigaretteLinkDraft.box20VariantId}
-                      onChange={(event) => updateCigaretteStockLinkRule({ box20VariantId: event.target.value })}
                       disabled={!adminProductVariants(findAdminProductOption(cigaretteProductOptions, cigaretteLinkDraft.box20ProductId)).length}
-                    >
-                      <option value="">Sin variante especifica</option>
-                      {adminProductVariants(findAdminProductOption(cigaretteProductOptions, cigaretteLinkDraft.box20ProductId)).map((variant) => (
-                        <option key={`draft-box20-variant-${variant.id}`} value={variant.id}>
-                          {variant.name || variant.id} · stock {variant.stock ?? 0}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Sin variante especifica"
+                      options={adminProductVariants(findAdminProductOption(cigaretteProductOptions, cigaretteLinkDraft.box20ProductId)).map((variant) => ({
+                        value: variant.id,
+                        label: `${variant.name || variant.id} · stock ${variant.stock ?? 0}`
+                      }))}
+                      onChange={(nextValue) => updateCigaretteStockLinkRule({ box20VariantId: nextValue })}
+                    />
                   </label>
                 </div>
                 <div className="react-admin-cigarette-link-saved-head">
