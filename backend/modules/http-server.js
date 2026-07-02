@@ -8365,6 +8365,23 @@ async function findFirebaseProductByLegacyId(productId) {
   return null;
 }
 
+async function findFirebaseCigaretteStockLinkRule(transaction, db, product, productId, saleVariantState) {
+  const directRule = selectCigaretteStockLinkRule(product?.cigaretteStockLink, productId, saleVariantState);
+  if (directRule) return directRule;
+
+  const productsSnap = await transaction.get(db.collection(firebaseCollectionName("products")));
+  for (const doc of productsSnap.docs || []) {
+    const candidate = doc.data() || {};
+    const rule = selectCigaretteStockLinkRule(
+      candidate.cigaretteStockLink ?? candidate.CIGARRO_STOCK_LINK,
+      productId,
+      saleVariantState
+    );
+    if (rule) return rule;
+  }
+  return null;
+}
+
 async function nextFirebaseSaleId(transaction, db) {
   const ref = db.collection(firebaseCollectionName("settings")).doc("counters");
   const snap = await transaction.get(ref);
@@ -8441,7 +8458,7 @@ async function registerSaleFirebase(payload) {
     const saleVariantState = getProductVariantState(product, variantId);
     const availableBeforeSale = saleVariantState ? saleVariantState.variantStockBefore : stockBefore;
     if (cigarettePresentation?.id === "unit" && round2(availableBeforeSale - reportQuantity) < CIGARETTE_MIN_UNIT_STOCK_AFTER_SALE) {
-      const stockLinkRule = selectCigaretteStockLinkRule(product.cigaretteStockLink, productId, saleVariantState);
+      const stockLinkRule = await findFirebaseCigaretteStockLinkRule(transaction, db, product, productId, saleVariantState);
       if (stockLinkRule) {
         const boxProductId = parseCartProductId(stockLinkRule.box20ProductId);
         const boxEntry = await findFirebaseProductByLegacyId(boxProductId);

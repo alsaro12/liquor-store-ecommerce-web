@@ -1650,7 +1650,7 @@ export default function AdminProductsPage({ quickIngressRequest = 0 } = {}) {
               </div>
               <div className="react-admin-cigarette-link-note is-span-2">
                 <strong>Regla</strong>
-                <span>Si la unidad o variante queda por debajo de 10 con la venta, se descuenta la caja x20 enlazada y se ingresan 20 unidades antes de vender.</span>
+                <span>Si la unidad o variante queda por debajo de 10 con la venta, se descuenta la caja x20 enlazada y se ingresan 20 unidades. La regla aplica aunque se haya creado desde otro producto.</span>
               </div>
               <div className="react-admin-modal-actions is-span-2">
                 <button
