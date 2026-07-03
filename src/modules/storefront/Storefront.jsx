@@ -2,7 +2,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import React, { useCallback } from "react";
 import officialLogo from "../../assets/branding/logotipoweb.png";
-import officialLogoMobile from "../../assets/branding/isotiposinfondo.png";
 import {
   createOrder,
   getCachedProductCategories,
@@ -506,7 +505,6 @@ function Header({
           aria-label="La Licoreria"
         >
           <img className="official-logo-full" src={officialLogo} alt="La Licoreria" />
-          <img className="official-logo-mobile" src={officialLogoMobile} alt="" aria-hidden="true" />
         </a>
       </div>
 

@@ -29329,8 +29329,7 @@ body.product-detail-lock {
   overflow: visible !important;
 }
 
-.official-logo-final .official-logo-full,
-.official-logo-final .official-logo-mobile {
+.official-logo-final .official-logo-full {
   width: auto !important;
   height: 100% !important;
   max-width: 100% !important;
@@ -29339,29 +29338,21 @@ body.product-detail-lock {
   object-position: left center !important;
 }
 
-.official-logo-final .official-logo-mobile {
-  display: none !important;
-}
-
 @media (max-width: 680px) {
   .official-logo-final {
     height: 34px !important;
     max-height: 34px !important;
-    width: 34px !important;
-    max-width: 34px !important;
+    width: auto !important;
+    max-width: min(52vw, 170px) !important;
   }
 
   .official-logo-final .official-logo-full {
-    display: none !important;
-  }
-
-  .official-logo-final .official-logo-mobile {
     display: block !important;
-    width: 34px !important;
+    width: auto !important;
     height: 34px !important;
-    max-width: 34px !important;
+    max-width: 100% !important;
     max-height: 34px !important;
     object-fit: contain !important;
-    object-position: center !important;
+    object-position: left center !important;
   }
 }
