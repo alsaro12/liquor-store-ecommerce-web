@@ -29322,8 +29322,8 @@ body.product-detail-lock {
 }
 /* Current web logo: keep the full mark inside the existing header height. */
 .official-logo-final {
-  height: clamp(34px, 3.8vw, 44px) !important;
-  max-height: 44px !important;
+  height: clamp(38px, 4.2vw, 48px) !important;
+  max-height: 48px !important;
   width: auto !important;
   max-width: min(42vw, 260px) !important;
   overflow: visible !important;
@@ -29345,10 +29345,10 @@ body.product-detail-lock {
 
 @media (max-width: 680px) {
   .official-logo-final {
-    height: 38px !important;
-    max-height: 38px !important;
-    width: 38px !important;
-    max-width: 38px !important;
+    height: 34px !important;
+    max-height: 34px !important;
+    width: 34px !important;
+    max-width: 34px !important;
   }
 
   .official-logo-final .official-logo-full {
@@ -29357,10 +29357,10 @@ body.product-detail-lock {
 
   .official-logo-final .official-logo-mobile {
     display: block !important;
-    width: 38px !important;
-    height: 38px !important;
-    max-width: 38px !important;
-    max-height: 38px !important;
+    width: 34px !important;
+    height: 34px !important;
+    max-width: 34px !important;
+    max-height: 34px !important;
     object-fit: contain !important;
     object-position: center !important;
   }
