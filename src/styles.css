@@ -29320,3 +29320,48 @@ body.product-detail-lock {
   from { opacity: 0.4; transform: scale(0.9); }
   to { opacity: 1; transform: scale(1); }
 }
+/* Current web logo: keep the full mark inside the existing header height. */
+.official-logo-final {
+  height: clamp(34px, 3.8vw, 44px) !important;
+  max-height: 44px !important;
+  width: auto !important;
+  max-width: min(42vw, 260px) !important;
+  overflow: visible !important;
+}
+
+.official-logo-final .official-logo-full,
+.official-logo-final .official-logo-mobile {
+  width: auto !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  object-position: left center !important;
+}
+
+.official-logo-final .official-logo-mobile {
+  display: none !important;
+}
+
+@media (max-width: 680px) {
+  .official-logo-final {
+    height: 38px !important;
+    max-height: 38px !important;
+    width: 38px !important;
+    max-width: 38px !important;
+  }
+
+  .official-logo-final .official-logo-full {
+    display: none !important;
+  }
+
+  .official-logo-final .official-logo-mobile {
+    display: block !important;
+    width: 38px !important;
+    height: 38px !important;
+    max-width: 38px !important;
+    max-height: 38px !important;
+    object-fit: contain !important;
+    object-position: center !important;
+  }
+}
