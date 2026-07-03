@@ -29322,10 +29322,10 @@ body.product-detail-lock {
 }
 /* Current web logo: keep the full mark inside the existing header height. */
 .official-logo-final {
-  height: clamp(38px, 4.2vw, 48px) !important;
-  max-height: 48px !important;
+  height: clamp(30px, 3vw, 34px) !important;
+  max-height: 34px !important;
   width: auto !important;
-  max-width: min(42vw, 260px) !important;
+  max-width: min(38vw, 220px) !important;
   overflow: visible !important;
 }
 
